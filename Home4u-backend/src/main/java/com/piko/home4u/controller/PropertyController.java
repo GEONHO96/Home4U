@@ -34,7 +34,9 @@ public class PropertyController {
 
     // ✅ 매물 상세 조회 API (다국어 적용)
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProperty(@PathVariable Long id, @RequestHeader(name = "Accept-Language", required = false) Locale locale) {
+    public ResponseEntity<?> getProperty(
+            @PathVariable Long id,
+            @RequestHeader(name = "Accept-Language", required = false) Locale locale) {
         Property property = propertyService.getPropertyById(id);
 
         Map<String, Object> response = Map.of(
@@ -76,5 +78,20 @@ public class PropertyController {
             @RequestParam(required = false) RoomStructure roomStructure,
             @RequestParam(required = false) List<AdditionalOption> additionalOptions) {
         return ResponseEntity.ok(propertyService.filterProperties(transactionType, minArea, maxArea, minFloor, maxFloor, roomStructure, additionalOptions));
+    }
+
+    // ✅ 매물 거래 요청 API
+    @PostMapping("/{propertyId}/transaction")
+    public ResponseEntity<Transaction> requestTransaction(
+            @PathVariable Long propertyId,
+            @RequestParam Long buyerId) {
+        return ResponseEntity.ok(propertyService.requestTransaction(propertyId, buyerId));
+    }
+
+    // ✅ 거래 승인 API
+    @PostMapping("/transaction/{transactionId}/approve")
+    public ResponseEntity<?> approveTransaction(@PathVariable Long transactionId) {
+        propertyService.approveTransaction(transactionId);
+        return ResponseEntity.ok(Map.of("message", "거래 승인 완료"));
     }
 }

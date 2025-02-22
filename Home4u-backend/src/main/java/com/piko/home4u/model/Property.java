@@ -1,10 +1,7 @@
 package com.piko.home4u.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.*;
 import java.util.List;
 
 @Entity
@@ -12,7 +9,10 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Property {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -56,16 +56,19 @@ public class Property {
     private RoomStructure roomStructure; // 방 구조 (원룸, 투룸, 쓰리룸 등)
 
     @Column(nullable = false)
-    private double minArea; // 최소 전용면적
+    private double minArea; // 최소 전용면적 (m²)
 
     @Column(nullable = false)
-    private double maxArea; // 최대 전용면적
+    private double maxArea; // 최대 전용면적 (m²)
 
     @ElementCollection
     @Enumerated(EnumType.STRING)
-    private List<AdditionalOption> additionalOptions; // 추가 옵션 리스트
+    private List<AdditionalOption> additionalOptions; // 추가 옵션 리스트 (엘리베이터, 주차장 등)
 
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner; // 매물 소유자 (중개업자 또는 개인)
+
+    @Column(nullable = false)
+    private boolean isSold = false; // 거래 완료 여부
 }

@@ -14,7 +14,10 @@ public class I18nController {
     private final MessageSource messageSource;
 
     // ✅ 다국어 메시지 테스트 API
-    public ResponseEntity<String> getMessage(@RequestParam String key, @RequestHeader(name = "Accept-Language", required = false) Locale locale) {
+    @GetMapping("/message")
+    public ResponseEntity<String> getMessage(
+            @RequestParam String key,
+            @RequestHeader(name = "Accept-Language", required = false) Locale locale) {
         String message = messageSource.getMessage(key, null, locale);
         return ResponseEntity.ok(message);
     }

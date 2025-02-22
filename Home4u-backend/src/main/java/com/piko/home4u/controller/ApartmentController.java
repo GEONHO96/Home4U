@@ -33,6 +33,6 @@ public class ApartmentController {
     // ✅ 해당 아파트 주변 학교 목록 조회
     @GetMapping("/{apartmentId}/schools")
     public ResponseEntity<List<School>> getSchools(@PathVariable Long apartmentId) {
-        return ResponseEntity.ok(apartmentService.getSchoolForApartment(apartmentId));
+        return ResponseEntity.ok(apartmentService.getSchoolsForApartment(apartmentId));
     }
 }

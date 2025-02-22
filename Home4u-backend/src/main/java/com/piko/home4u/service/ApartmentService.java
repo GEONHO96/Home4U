@@ -19,6 +19,36 @@ public class ApartmentService {
     private final RealtorRepository realtorRepository;
     private final SchoolRepository schoolRepository;
 
+    // ✅ 특정 아파트 이름으로 조회
+    public Optional<Apartment> getApartmentByName(String name) {
+        return apartmentRepository.findByName(name);
+    }
+
+    // ✅ 특정 구/군 내 모든 아파트 조회
+    public List<Apartment> getApartmentsByGungu(String gungu) {
+        return apartmentRepository.findByGungu(gungu);
+    }
+
+    // ✅ 특정 동 내 아파트 조회
+    public List<Apartment> getApartmentsByDong(String dong) {
+        return apartmentRepository.findByDong(dong);
+    }
+
+    // ✅ 특정 지역 내 아파트 개수 조회
+    public Long countApartmentsInGungu(String gungu) {
+        return apartmentRepository.countByGungu(gungu);
+    }
+
+    // ✅ 특정 아파트의 용적률과 건폐율 조회
+    public Object[] getRatiosById(Long id) {
+        return apartmentRepository.findRatiosById(id);
+    }
+
+    // ✅ 특정 아파트의 시공사 및 난방 방식 조회
+    public Object[] getConstructorAndHeating(Long id) {
+        return apartmentRepository.findConstructorAndHeatingByIdNative(id);
+    }
+
     // ✅ 아파트 상세 정보 조회
     public Optional<Apartment> getApartmentDetails(String name) {
         return apartmentRepository.findByName(name);
@@ -30,7 +60,7 @@ public class ApartmentService {
     }
 
     // ✅ 해당 아파트 주변 학교 목록 조회
-    public List<School> getSchoolForApartment(Long apartmentId) {
+    public List<School> getSchoolsForApartment(Long apartmentId) {
         return schoolRepository.findByApartmentId(apartmentId);
     }
 }
