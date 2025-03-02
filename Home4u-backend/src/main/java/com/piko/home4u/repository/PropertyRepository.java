@@ -40,10 +40,11 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "AND (:minFloor IS NULL OR p.floor >= :minFloor) " +
             "AND (:maxFloor IS NULL OR p.floor <= :maxFloor) " +
             "AND (:roomStructure IS NULL OR p.roomStructure = :roomStructure) " +
-            "AND (:additionalOptions IS NULL OR p.additionalOptions IN :additionalOptions)")
+            "AND (:additionalOptions IS NULL OR :additionalOptions MEMBER OF p.additionalOptions)")
     List<Property> findByFilters(TransactionType transactionType, Double minArea, Double maxArea,
                                  Integer minFloor, Integer maxFloor, RoomStructure roomStructure,
                                  List<AdditionalOption> additionalOptions);
+
 
 
 }

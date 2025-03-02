@@ -35,7 +35,7 @@ public class UserService {
         );
 
         // 중개업자인 경우 추가 정보 설정
-        if (role == UserRole.ROLE_REALTOR) {
+        if (role == UserRole.ROLE_REALTOR) { // ✅ ENUM 값 변경 반영
             user.setLicenseNumber(userSignupDto.getLicenseNumber()); // ✅ setter 메서드 사용
             user.setAgencyName(userSignupDto.getAgencyName()); // ✅ setter 메서드 사용
         }
@@ -82,9 +82,9 @@ public class UserService {
         return userRepository.findByPhone(phone);
     }
 
-    // ✅ 중개업자(ROLE_REALTOR) 목록 조회
+    // ✅ 중개업자 목록 조회 (수정된 메서드 사용)
     public List<User> getAllRealtors() {
-        return userRepository.findAllRelators();
+        return userRepository.findByRole(UserRole.ROLE_REALTOR);  // ✅ findByRole로 변경
     }
 
     // ✅ 중개업자 라이선스 번호로 검색
