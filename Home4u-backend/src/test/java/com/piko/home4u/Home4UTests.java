@@ -2,6 +2,7 @@ package com.piko.home4u;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.*;
+import com.piko.home4u.dto.UserSignupDto;
 import com.piko.home4u.model.*;
 import com.piko.home4u.service.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +60,11 @@ class Home4UTests {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         this.mockMvc = MockMvcBuilders.standaloneSetup(
-                apartmentController, propertyController, userController, reviewController, realtorController
+                apartmentController,
+                propertyController,
+                userController,
+                reviewController,
+                realtorController
         ).build();
     }
 
@@ -94,13 +99,20 @@ class Home4UTests {
     // ✅ UserController 테스트
     @Test
     void testRegisterUser() throws Exception {
-        User user = new User("john_doe", "password", "john@example.com", "01012345678", UserRole.ROLE_USER);
-        when(userService.registerUser(any())).thenReturn(user);
+        UserSignupDto userDto = new UserSignupDto();
+        userDto.setUsername("john_doe");
+        userDto.setPassword("password");
+        userDto.setEmail("john@example.com");
+        userDto.setPhone("01012345678");
+        userDto.setRole(UserRole.ROLE_USER);
+
+        doNothing().when(userService).registerUser(any(UserSignupDto.class));
 
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(user)))
-                .andExpect(status().isOk());
+                        .content(objectMapper.writeValueAsString(userDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("회원 가입 성공"));
     }
 
     @Test

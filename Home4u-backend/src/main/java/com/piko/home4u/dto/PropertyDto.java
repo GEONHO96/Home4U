@@ -2,10 +2,11 @@ package com.piko.home4u.dto;
 
 import com.piko.home4u.model.PropertyType;
 import com.piko.home4u.model.TransactionType;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
-@Getter @Setter
+@Getter
+@AllArgsConstructor
 public class PropertyDto {
     private String title;
     private String description;

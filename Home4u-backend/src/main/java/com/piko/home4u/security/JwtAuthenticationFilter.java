@@ -24,8 +24,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String requestURI = request.getRequestURI();
 
-        // ✅ 회원가입(/users/register)과 로그인(/users/login) 요청은 필터 제외
-        if (requestURI.startsWith("/users/register") || requestURI.startsWith("/users/login")) {
+        if (requestURI.startsWith("/users/register") ||
+                requestURI.startsWith("/users/login") ||
+                requestURI.startsWith("/swagger-ui") ||
+                requestURI.startsWith("/v3/api-docs")) {
             chain.doFilter(request, response);
             return;
         }
