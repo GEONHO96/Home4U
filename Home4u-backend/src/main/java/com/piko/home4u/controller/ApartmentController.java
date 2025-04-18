@@ -18,10 +18,11 @@ public class ApartmentController {
     private final ApartmentService apartmentService;
 
     // ✅ 아파트 상세 정보 표현
-    @GetMapping("/{name}")
-    public ResponseEntity<?> getApartmentDetails(@PathVariable String name) {
-        Optional<Apartment> apartment = apartmentService.getApartmentDetails(name);
-        return apartment.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    @GetMapping("/name/{name}")
+    public ResponseEntity<Apartment> getApartmentDetails(@PathVariable String name) {
+        return apartmentService.getApartmentDetails(name)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // ✅ 해당 아파트의 공인중개사 목록 조회

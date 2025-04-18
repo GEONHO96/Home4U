@@ -17,13 +17,17 @@ public class ReviewController {
 
     // ✅ 리뷰 작성 API
     @PostMapping
-    public ResponseEntity<Map<String, Object>> addReview(
-            @RequestParam Long propertyId,
-            @RequestParam Long userId,
-            @RequestParam int rating,
-            @RequestParam String comment) {
+    public ResponseEntity<Map<String,Object>> addReview(
+            @RequestParam("propertyId") Long propertyId,
+            @RequestParam("userId")     Long userId,
+            @RequestParam("rating")     int    rating,
+            @RequestParam("comment")    String comment
+    ) {
         Review review = reviewService.addReview(propertyId, userId, rating, comment);
-        return ResponseEntity.ok(Map.of("message", "리뷰 작성 성공", "reviewId", review.getId()));
+        return ResponseEntity.ok(Map.of(
+                "message", "리뷰 작성 성공",
+                "reviewId", review.getId()
+        ));
     }
 
     // ✅ 특정 매물의 리뷰 조회 API
