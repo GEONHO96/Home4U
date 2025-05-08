@@ -1,5 +1,7 @@
 package com.piko.home4u.service;
 
+import com.piko.home4u.dto.ConstructorHeatingDto;
+import com.piko.home4u.dto.RatioDto;
 import com.piko.home4u.model.Apartment;
 import com.piko.home4u.model.Realtor;
 import com.piko.home4u.model.School;
@@ -40,13 +42,13 @@ public class ApartmentService {
     }
 
     // ✅ 특정 아파트의 용적률과 건폐율 조회
-    public Object[] getRatiosById(Long id) {
-        return apartmentRepository.findRatiosById(id);
+    public RatioDto getRatiosById(Long id) {
+        return apartmentRepository.fetchRatiosById(id);
     }
 
     // ✅ 특정 아파트의 시공사 및 난방 방식 조회
-    public Object[] getConstructorAndHeating(Long id) {
-        return apartmentRepository.findConstructorAndHeatingByIdNative(id);
+    public ConstructorHeatingDto getConstructorHeatingById(Long id) {
+        return apartmentRepository.fetchConstructorHeatingById(id);
     }
 
     // ✅ 아파트 상세 정보 조회

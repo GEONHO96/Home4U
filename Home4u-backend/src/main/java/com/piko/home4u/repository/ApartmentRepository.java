@@ -1,5 +1,7 @@
 package com.piko.home4u.repository;
 
+import com.piko.home4u.dto.ConstructorHeatingDto;
+import com.piko.home4u.dto.RatioDto;
 import com.piko.home4u.model.Apartment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,39 +12,43 @@ import java.util.Optional;
 @Repository
 public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
 
-    // ✅ 특정 아파트 이름으로 조회 (JPQL)
+    /** 이름으로 조회 */
     Optional<Apartment> findByName(String name);
 
-    // ✅ 특정 아파트 이름으로 조회 (네이티브 SQL)
-    @Query(value = "SELECT * FROM apartments WHERE name = :name LIMIT 1", nativeQuery = true)
-    Optional<Apartment> findByNameNative(String name);
-
-    // ✅ 특정 지역(구/군) 내 모든 아파트 조회 (JPQL)
+    /** 구/군 내 전체 조회 */
     List<Apartment> findByGungu(String gungu);
 
-    // ✅ 특정 지역(구/군) 내 모든 아파트 조회 (네이티브 SQL)
-    @Query(value = "SELECT * FROM apartments WHERE gungu = :gungu", nativeQuery = true)
-    List<Apartment> findByGunguNative(String gungu);
-
-    // ✅ 특정 동 내 아파트 조회 (JPQL)
+    /** 동 내 전체 조회 */
     List<Apartment> findByDong(String dong);
 
-    // ✅ 특정 동 내 아파트 조회 (네이티브 SQL)
-    @Query(value = "SELECT * FROM apartments WHERE dong = :dong", nativeQuery = true)
-    List<Apartment> findByDongNative(String dong);
-
-    // ✅ 특정 지역(구/군) 내 아파트 개수 조회 (JPQL)
+    /** 구/군별 개수 조회 */
     Long countByGungu(String gungu);
 
-    // ✅ 특정 지역(구/군) 내 아파트 개수 조회 (네이티브 SQL)
-    @Query(value = "SELECT COUNT(*) FROM apartments WHERE gungu = :gungu", nativeQuery = true)
-    Long countApartmentsByGunguNative(String gungu);
+    /**
+     * 용적률(floorAreaRatio)과 건폐율(buildingCoverageRatio)을
+     * RatioDto 로 바로 매핑하여 반환
+     */
+    @Query("""
+        SELECT new com.piko.home4u.dto.RatioDto(
+            a.floorAreaRatio,
+            a.buildingCoverageRatio
+        )
+        FROM Apartment a
+        WHERE a.id = :id
+        """)
+    RatioDto fetchRatiosById(Long id);
 
-    // ✅ 특정 아파트의 용적률과 건폐율 조회 (JPQL)
-    @Query("SELECT a.floorAreaRatio, a.buildingCoverageRatio FROM Apartment a WHERE a.id = :id")
-    Object[] findRatiosById(Long id);
-
-    // ✅ 특정 아파트의 시공사 및 난방 방식 조회 (네이티브 SQL)
-    @Query(value = "SELECT constructor, heating_type FROM apartments WHERE id = :id", nativeQuery = true)
-    Object[] findConstructorAndHeatingByIdNative(Long id);
+    /**
+     * 시공사(constructor)와 난방방식(heatingType)을
+     * ConstructorHeatingDto 로 바로 매핑하여 반환
+     */
+    @Query("""
+        SELECT new com.piko.home4u.dto.ConstructorHeatingDto(
+            a.constructor,
+            a.heatingType
+        )
+        FROM Apartment a
+        WHERE a.id = :id
+        """)
+    ConstructorHeatingDto fetchConstructorHeatingById(Long id);
 }

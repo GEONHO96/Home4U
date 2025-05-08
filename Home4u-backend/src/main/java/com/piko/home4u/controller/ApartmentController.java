@@ -1,5 +1,7 @@
 package com.piko.home4u.controller;
 
+import com.piko.home4u.dto.ConstructorHeatingDto;
+import com.piko.home4u.dto.RatioDto;
 import com.piko.home4u.model.Apartment;
 import com.piko.home4u.model.Realtor;
 import com.piko.home4u.model.School;
@@ -9,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/apartments")
@@ -17,21 +18,43 @@ import java.util.Optional;
 public class ApartmentController {
     private final ApartmentService apartmentService;
 
-    // ✅ 아파트 상세 정보 표현
     @GetMapping("/name/{name}")
-    public ResponseEntity<Apartment> getApartmentDetails(@PathVariable String name) {
-        return apartmentService.getApartmentDetails(name)
+    public ResponseEntity<Apartment> getByName(@PathVariable String name) {
+        return apartmentService.getApartmentByName(name)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // ✅ 해당 아파트의 공인중개사 목록 조회
+    @GetMapping("/gungu/{gungu}")
+    public ResponseEntity<List<Apartment>> getByGungu(@PathVariable String gungu) {
+        return ResponseEntity.ok(apartmentService.getApartmentsByGungu(gungu));
+    }
+
+    @GetMapping("/dong/{dong}")
+    public ResponseEntity<List<Apartment>> getByDong(@PathVariable String dong) {
+        return ResponseEntity.ok(apartmentService.getApartmentsByDong(dong));
+    }
+
+    @GetMapping("/gungu/{gungu}/count")
+    public ResponseEntity<Long> countByGungu(@PathVariable String gungu) {
+        return ResponseEntity.ok(apartmentService.countApartmentsInGungu(gungu));
+    }
+
+    @GetMapping("/{id}/ratios")
+    public ResponseEntity<RatioDto> getRatios(@PathVariable Long id) {
+        return ResponseEntity.ok(apartmentService.getRatiosById(id));
+    }
+
+    @GetMapping("/{id}/constructor-heating")
+    public ResponseEntity<ConstructorHeatingDto> getConstructorHeating(@PathVariable Long id) {
+        return ResponseEntity.ok(apartmentService.getConstructorHeatingById(id));
+    }
+
     @GetMapping("/{apartmentId}/relators")
     public ResponseEntity<List<Realtor>> getRelators(@PathVariable Long apartmentId) {
         return ResponseEntity.ok(apartmentService.getRealtorsForApartment(apartmentId));
     }
 
-    // ✅ 해당 아파트 주변 학교 목록 조회
     @GetMapping("/{apartmentId}/schools")
     public ResponseEntity<List<School>> getSchools(@PathVariable Long apartmentId) {
         return ResponseEntity.ok(apartmentService.getSchoolsForApartment(apartmentId));
