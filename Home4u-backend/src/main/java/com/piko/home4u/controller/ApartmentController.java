@@ -50,8 +50,8 @@ public class ApartmentController {
         return ResponseEntity.ok(apartmentService.getConstructorHeatingById(id));
     }
 
-    @GetMapping("/{apartmentId}/relators")
-    public ResponseEntity<List<Realtor>> getRelators(@PathVariable Long apartmentId) {
+    @GetMapping("/{apartmentId}/realtors")
+    public ResponseEntity<List<Realtor>> getRealtors(@PathVariable Long apartmentId) {
         return ResponseEntity.ok(apartmentService.getRealtorsForApartment(apartmentId));
     }
 

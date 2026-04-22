@@ -1,5 +1,6 @@
 package com.piko.home4u.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -70,5 +71,7 @@ public class Property {
     private User owner; // 매물 소유자 (중개업자 또는 개인)
 
     @Column(nullable = false)
-    private boolean isSold = false; // 거래 완료 여부
+    @JsonProperty("isSold")
+    @Builder.Default
+    private boolean isSold = false; // 거래 완료 여부 (JSON 필드명: "isSold")
 }

@@ -65,9 +65,9 @@ public class UserController {
         return getUserResponse(userService.getUserByPhone(phone));
     }
 
-    // ✅ 중계업자(ROLE_REALTOR) 목록 조회
-    @GetMapping("/relators")
-    public ResponseEntity<List<User>> getAllRelators() {
+    // ✅ 중개업자(ROLE_REALTOR) 목록 조회
+    @GetMapping("/realtors")
+    public ResponseEntity<List<User>> getAllRealtors() {
         return ResponseEntity.ok(userService.getAllRealtors());
     }
 

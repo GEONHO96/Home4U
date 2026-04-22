@@ -27,14 +27,14 @@ public interface RealtorRepository extends JpaRepository<Realtor, Long> {
     Realtor findByPhoneNumberNative(String phoneNumber);
 
     // ✅ 특정 지역(구/군)에 속한 공인중개사 목록 조회 (JPQL)
-    @Query("SELECT r FROM Realtor r WHERE r.address LIKE %:gungu%")
+    @Query("SELECT r FROM Realtor r WHERE r.address LIKE CONCAT('%', :gungu, '%')")
     List<Realtor> findByGungu(String gungu);
 
     // ✅ 특정 지역(구/군)에 속한 공인중개사 목록 조회 (네이티브 SQL)
-    @Query(value = "SELECT * FROM realtors WHERE address LIKE %:gungu%", nativeQuery = true)
+    @Query(value = "SELECT * FROM realtors WHERE address LIKE CONCAT('%', :gungu, '%')", nativeQuery = true)
     List<Realtor> findByGunguNative(String gungu);
 
     // ✅ 특정 지역(구/군) 내 공인중개사 개수 조회
-    @Query("SELECT COUNT(r) FROM Realtor r WHERE r.address LIKE %:gungu%")
+    @Query("SELECT COUNT(r) FROM Realtor r WHERE r.address LIKE CONCAT('%', :gungu, '%')")
     Long countRealtorsByGungu(String gungu);
 }

@@ -127,7 +127,7 @@ class Home4UTests {
     void testAddReview() throws Exception {
         Review review = new Review();
         review.setId(1L);
-        when(reviewService.addReview(anyLong(), anyLong(), anyInt(), anyString()))
+        when(reviewService.createReview(anyLong(), anyLong(), anyInt(), anyString()))
                 .thenReturn(review);
 
         mockMvc.perform(post("/reviews")

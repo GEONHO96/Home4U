@@ -18,10 +18,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
 
+        // UserRole enum 은 ROLE_ 접두사 포함 → .authorities() 로 그대로 사용
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
-                .roles("USER")
+                .authorities(user.getRole().name())
                 .build();
     }
 }

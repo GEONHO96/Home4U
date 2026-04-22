@@ -17,7 +17,7 @@ public class PropertyService {
     private final TransactionRepository transactionRepository;
 
     // ✅ 매물 등록
-    public Property addProperty(PropertyDto propertyDto, Long ownerId) {
+    public Property createProperty(PropertyDto propertyDto, Long ownerId) {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new RuntimeException("소유자를 찾을 수 없습니다."));
 
@@ -26,6 +26,15 @@ public class PropertyService {
                 .description(propertyDto.getDescription())
                 .price(propertyDto.getPrice())
                 .address(propertyDto.getAddress())
+                .latitude(propertyDto.getLatitude())
+                .longitude(propertyDto.getLongitude())
+                .dong(propertyDto.getDong())
+                .gungu(propertyDto.getGungu())
+                .floor(propertyDto.getFloor())
+                .minArea(propertyDto.getMinArea())
+                .maxArea(propertyDto.getMaxArea())
+                .roomStructure(propertyDto.getRoomStructure())
+                .additionalOptions(propertyDto.getAdditionalOptions())
                 .propertyType(propertyDto.getPropertyType())
                 .transactionType(propertyDto.getTransactionType())
                 .isSold(false)
@@ -61,10 +70,11 @@ public class PropertyService {
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new RuntimeException("구매자를 찾을 수 없습니다."));
 
-        // 거래 생성
+        // 거래 생성 (seller 는 매물 소유자)
         Transaction transaction = Transaction.builder()
                 .property(property)
                 .buyer(buyer)
+                .seller(property.getOwner())
                 .status(TransactionStatus.PENDING) // 초기 상태: 대기
                 .build();
 

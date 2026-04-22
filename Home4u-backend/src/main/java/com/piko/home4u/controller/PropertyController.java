@@ -22,9 +22,9 @@ public class PropertyController {
 
     // ✅ 매물 등록 API
     @PostMapping
-    public ResponseEntity<Map<String, Object>> addProperty(@RequestBody PropertyDto propertyDto,
-                                                           @RequestParam Long ownerId) {
-        Property property = propertyService.addProperty(propertyDto, ownerId);
+    public ResponseEntity<Map<String, Object>> createProperty(@RequestBody PropertyDto propertyDto,
+                                                              @RequestParam Long ownerId) {
+        Property property = propertyService.createProperty(propertyDto, ownerId);
         return ResponseEntity.ok(Map.of(
                 "message", "매물 등록 성공",
                 "propertyId", property.getId()
@@ -96,14 +96,14 @@ public class PropertyController {
     }
 
     // ✅ 매물 거래 요청 API
-    @PostMapping("/{propertyId}/transaction")
+    @PostMapping("/{propertyId}/transactions")
     public ResponseEntity<Transaction> requestTransaction(@PathVariable Long propertyId,
                                                           @RequestParam Long buyerId) {
         return ResponseEntity.ok(propertyService.requestTransaction(propertyId, buyerId));
     }
 
     // ✅ 거래 승인 API
-    @PostMapping("/transaction/{transactionId}/approve")
+    @PostMapping("/transactions/{transactionId}/approve")
     public ResponseEntity<Map<String, String>> approveTransaction(@PathVariable Long transactionId) {
         propertyService.approveTransaction(transactionId);
         return ResponseEntity.ok(Map.of("message", "거래 승인 완료"));

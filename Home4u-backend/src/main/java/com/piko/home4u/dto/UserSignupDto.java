@@ -21,7 +21,7 @@ public class UserSignupDto {
     private String phone;
 
     @JsonProperty("role")
-    private UserRole role; // ROLE_USER or ROLE_RELATOR
+    private UserRole role; // ROLE_USER or ROLE_REALTOR
 
     @JsonProperty("licenseNumber")
     private String licenseNumber; // 중개업자(공인중개사)일 경우 필요

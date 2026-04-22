@@ -1,5 +1,7 @@
 package com.piko.home4u.security;
 
+import com.piko.home4u.model.User;
+import com.piko.home4u.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -21,8 +23,16 @@ import java.util.Date;
 public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secretKey;
+
+    @Value("${jwt.expiration:3600000}")
+    private long validityInMilliseconds;
+
+    private final UserRepository userRepository;
     private Key key;
-    private final long validityInMilliseconds = 3600000; // 1시간
+
+    public JwtTokenProvider(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @PostConstruct
     protected void init() {
@@ -43,7 +53,7 @@ public class JwtTokenProvider {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            log.error("Invalid JWT token");
+            log.error("Invalid JWT token: {}", e.getMessage());
         }
         return false;
     }
@@ -58,6 +68,15 @@ public class JwtTokenProvider {
     }
 
     public Authentication getAuthentication(String token) {
-        return new UsernamePasswordAuthenticationToken(getUsername(token), "", Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+        String username = getUsername(token);
+        String authority = userRepository.findByUsername(username)
+                .map(User::getRole)
+                .map(Enum::name)
+                .orElse("ROLE_USER");
+        return new UsernamePasswordAuthenticationToken(
+                username,
+                "",
+                Collections.singletonList(new SimpleGrantedAuthority(authority))
+        );
     }
 }

@@ -44,8 +44,12 @@ dependencies {
     // ✅ 환경 변수 관리 라이브러리 (Dotenv)
     implementation 'io.github.cdimascio:dotenv-java:2.2.0'
 
-    // ✅ Database (MySQL)
+    // ✅ Database (H2: 개발 프로파일용 in-memory, MySQL: mysql 프로파일용)
+    runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // ✅ Spring Security 테스트 지원
+    testImplementation 'org.springframework.security:spring-security-test'
 
     // ✅ 테스트 라이브러리 (Spring Boot Test & Mockito)
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

@@ -21,7 +21,7 @@ public class ReviewService {
 
     // ✅ 리뷰 작성
     @Transactional
-    public Review addReview(Long propertyId, Long userId, int rating, String comment) {
+    public Review createReview(Long propertyId, Long userId, int rating, String comment) {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new RuntimeException("매물을 찾을 수 없습니다."));
         User user = userRepository.findById(userId)
