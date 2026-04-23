@@ -4,6 +4,7 @@ import RegisterPage from './pages/RegisterPage';
 import PropertyListPage from './pages/PropertyListPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
 import PropertyCreatePage from './pages/PropertyCreatePage';
+import TransactionsPage from './pages/TransactionsPage';
 import './App.css';
 
 function Home() {
@@ -28,11 +29,12 @@ function Home() {
         <Link to="/properties">매물 목록</Link>
         {username ? (
           <>
+            <Link to="/transactions/me">내 거래</Link>
+            {role === 'ROLE_REALTOR' && <Link to="/properties/new">매물 등록</Link>}
             <span>
               {username}
               {role === 'ROLE_REALTOR' && ' (공인중개사)'}
             </span>
-            {role === 'ROLE_REALTOR' && <Link to="/properties/new">매물 등록</Link>}
             <button type="button" onClick={logout}>로그아웃</button>
           </>
         ) : (
@@ -55,6 +57,7 @@ function App() {
       <Route path="/properties" element={<PropertyListPage />} />
       <Route path="/properties/new" element={<PropertyCreatePage />} />
       <Route path="/properties/:id" element={<PropertyDetailPage />} />
+      <Route path="/transactions/me" element={<TransactionsPage />} />
     </Routes>
   );
 }
