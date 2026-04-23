@@ -49,11 +49,24 @@ public class PropertyController {
         }
 
         PropertyResponseDto dto = PropertyResponseDto.builder()
+                .id(property.getId())
                 .title(property.getTitle())
                 .description(property.getDescription())
                 .price(property.getPrice())
                 .address(property.getAddress())
+                .latitude(property.getLatitude())
+                .longitude(property.getLongitude())
+                .dong(property.getDong())
+                .gungu(property.getGungu())
+                .propertyType(property.getPropertyType())
                 .transactionType(property.getTransactionType())
+                .floor(property.getFloor())
+                .roomStructure(property.getRoomStructure())
+                .minArea(property.getMinArea())
+                .maxArea(property.getMaxArea())
+                .additionalOptions(property.getAdditionalOptions())
+                .isSold(property.isSold())
+                .ownerId(property.getOwner() != null ? property.getOwner().getId() : null)
                 .localizedMessages(Map.of(
                         "title",           messageSource.getMessage("property.title",           null, locale),
                         "description",     messageSource.getMessage("property.description",     null, locale),

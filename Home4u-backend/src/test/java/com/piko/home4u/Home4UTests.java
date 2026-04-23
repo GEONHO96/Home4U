@@ -137,6 +137,11 @@ class Home4UTests {
         when(userService.login("john_doe", "password"))
                 .thenReturn("fake-jwt-token");
 
+        com.piko.home4u.model.User loggedIn = new com.piko.home4u.model.User(
+                "john_doe", "pw", "j@d.com", "010", UserRole.ROLE_USER);
+        loggedIn.setId(99L);
+        when(userService.getUserByUsername("john_doe")).thenReturn(Optional.of(loggedIn));
+
         LoginDto dto = new LoginDto();
         dto.setUsername("john_doe");
         dto.setPassword("password");
@@ -145,7 +150,9 @@ class Home4UTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("fake-jwt-token"));
+                .andExpect(jsonPath("$.token").value("fake-jwt-token"))
+                .andExpect(jsonPath("$.userId").value(99))
+                .andExpect(jsonPath("$.role").value("ROLE_USER"));
     }
 
     @Test

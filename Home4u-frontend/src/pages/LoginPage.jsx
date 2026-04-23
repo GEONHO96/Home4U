@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { loginUser } from '../api/userApi';
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axiosInstance';
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ username: '', password: '' });
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -11,13 +14,17 @@ function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError(null);
     try {
-      const token = await loginUser(form); // ✅ username, password 포함 객체 전달
+      const res = await axiosInstance.post('/users/login', form);
+      const { token, userId, username, role } = res.data;
       localStorage.setItem('token', token);
-      alert('로그인 성공!');
-      // TODO: 라우팅 이동 추가
+      localStorage.setItem('userId', String(userId));
+      localStorage.setItem('username', username);
+      localStorage.setItem('role', role);
+      navigate('/properties');
     } catch (err) {
-      alert('로그인 실패: ' + (err.message || '서버 오류'));
+      setError(err.response?.data?.message || err.message || '로그인 실패');
     }
   };
 
@@ -32,6 +39,7 @@ function LoginPage() {
         value={form.password}
         onChange={handleChange}
       />
+      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
       <button type="submit">로그인</button>
     </form>
   );

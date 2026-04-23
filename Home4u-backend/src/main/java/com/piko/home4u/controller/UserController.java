@@ -27,10 +27,18 @@ public class UserController {
     }
 
     // ✅ 로그인 API (JWT 토큰 발급)
+    // 응답에 userId/role 을 함께 내려서 프론트에서 후속 요청 (예: POST /properties?ownerId=...) 에 쓸 수 있게 한다.
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDto loginDto) {
         String token = userService.login(loginDto.getUsername(), loginDto.getPassword());
-        return ResponseEntity.ok(Map.of("token", token));
+        User user = userService.getUserByUsername(loginDto.getUsername())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "userId", user.getId(),
+                "username", user.getUsername(),
+                "role", user.getRole().name()
+        ));
     }
 
     // ✅ 회원탈퇴 API (JWT 토큰을 통해 본인 확인 후 계정 삭제)

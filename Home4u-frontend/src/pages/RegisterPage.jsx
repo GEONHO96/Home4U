@@ -1,10 +1,10 @@
-// src/pages/RegisterPage.jsx
 import React, { useState } from 'react';
-import { registerUser } from '../api/userApi';
 import { useNavigate } from 'react-router-dom';
+import { registerUser } from '../api/userApi';
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const [error, setError] = useState(null);
 
   const [form, setForm] = useState({
     username: '',
@@ -26,20 +26,18 @@ function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
 
-    // 공인중개사 필수 항목 체크
     if (form.role === 'ROLE_REALTOR' && (!form.licenseNumber.trim() || !form.agencyName.trim())) {
-      alert('중개업자 번호와 중개업소 이름을 모두 입력해주세요.');
+      setError('중개업자 번호와 중개업소 이름을 모두 입력해주세요.');
       return;
     }
 
     try {
-      const result = await registerUser(form);
-      alert(result.message || '회원가입 성공!');
-      navigate('/login'); // 로그인 페이지로 이동
+      await registerUser(form);
+      navigate('/login');
     } catch (err) {
-      console.error(err);
-      alert('회원가입 실패: ' + (err.response?.data?.message || err.message || '알 수 없는 오류'));
+      setError('회원가입 실패: ' + (err.response?.data?.message || err.message || '알 수 없는 오류'));
     }
   };
 
@@ -91,6 +89,8 @@ function RegisterPage() {
           />
         </>
       )}
+
+      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
 
       <button type="submit">회원가입</button>
     </form>

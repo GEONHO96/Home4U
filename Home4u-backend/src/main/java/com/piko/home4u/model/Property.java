@@ -1,5 +1,6 @@
 package com.piko.home4u.model;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,6 +13,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// 필드 기반 직렬화 고정. (@Getter 가 만드는 isSold() 가 Jackson 에 의해
+//  "sold" 속성으로 잡혀서 @JsonProperty("isSold") 필드와 중복 노출되는 것을 차단)
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE
+)
 public class Property {
 
     @Id
