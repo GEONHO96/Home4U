@@ -93,6 +93,15 @@ public class PropertyService {
         propertyRepository.save(transaction.getProperty());
     }
 
+    // ✅ 거래 거절 (판매자가 거절) — 매물의 isSold 는 건드리지 않는다
+    public void rejectTransaction(Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("거래 요청을 찾을 수 없습니다."));
+
+        transaction.setStatus(TransactionStatus.REJECTED);
+        transactionRepository.save(transaction);
+    }
+
     // ✅ 지도 기반 검색
     public List<Property> searchProperties(String buildingType, Double minLat, Double maxLat, Double minLng, Double maxLng) {
         if (buildingType != null) {

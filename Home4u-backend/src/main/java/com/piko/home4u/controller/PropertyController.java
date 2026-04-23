@@ -121,4 +121,11 @@ public class PropertyController {
         propertyService.approveTransaction(transactionId);
         return ResponseEntity.ok(Map.of("message", "거래 승인 완료"));
     }
+
+    // ✅ 거래 거절 API
+    @PostMapping("/transactions/{transactionId}/reject")
+    public ResponseEntity<Map<String, String>> rejectTransaction(@PathVariable Long transactionId) {
+        propertyService.rejectTransaction(transactionId);
+        return ResponseEntity.ok(Map.of("message", "거래 거절 완료"));
+    }
 }

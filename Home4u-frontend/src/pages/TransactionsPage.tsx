@@ -4,6 +4,7 @@ import {
   approveTransaction,
   getTransactionsByBuyer,
   getTransactionsBySeller,
+  rejectTransaction,
 } from '../api/transactionApi';
 import { TRANSACTION_STATUSES, type Transaction, type TransactionStatus } from '../types/transaction';
 
@@ -61,6 +62,18 @@ function TransactionsPage() {
     }
   };
 
+  const handleReject = async (txId: number) => {
+    setBusyId(txId);
+    try {
+      await rejectTransaction(txId);
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '거래 거절 실패');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <section>
       <h2>내 거래 내역</h2>
@@ -112,13 +125,20 @@ function TransactionsPage() {
                 {' '}판매자: {tx.seller?.username ?? `#${tx.seller?.id ?? '?'}`}
               </div>
               {tab === 'seller' && tx.status === 'PENDING' && (
-                <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                   <button
                     type="button"
                     onClick={() => handleApprove(tx.id)}
                     disabled={busyId === tx.id}
                   >
                     {busyId === tx.id ? '처리 중…' : '승인'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReject(tx.id)}
+                    disabled={busyId === tx.id}
+                  >
+                    거절
                   </button>
                 </div>
               )}
