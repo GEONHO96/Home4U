@@ -41,7 +41,18 @@ public class PropertyController {
     @GetMapping("/{id}")
     public ResponseEntity<PropertyResponseDto> getProperty(
             @PathVariable Long id,
-            @RequestHeader(name = "Accept-Language", required = false) Locale locale) {
+            @RequestHeader(name = "Accept-Language", required = false) String acceptLanguage) {
+
+        // 브라우저는 "ko,en;q=0.9,en-US;q=0.8" 형태로 다중 언어를 보낸다.
+        // 첫 번째 태그만 꺼내 Locale.forLanguageTag 로 안전하게 파싱.
+        Locale locale = Locale.KOREAN;
+        if (acceptLanguage != null && !acceptLanguage.isBlank()) {
+            String first = acceptLanguage.split(",")[0].split(";")[0].trim();
+            Locale parsed = Locale.forLanguageTag(first);
+            if (!parsed.getLanguage().isEmpty()) {
+                locale = parsed;
+            }
+        }
 
         Property property = propertyService.getPropertyById(id);
         if (property == null) {

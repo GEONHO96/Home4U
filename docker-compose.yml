@@ -1,0 +1,59 @@
+# =============================================================
+# Home4U docker-compose
+# 로컬에서 전체 스택 (MySQL + Spring Boot + nginx+dist) 을 한 번에 기동한다.
+# =============================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: home4u-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: home4u
+      MYSQL_USER: ${MYSQL_USER:-home4u}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-home4u_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./Home4u-backend
+      dockerfile: Dockerfile
+    container_name: home4u-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: mysql
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/home4u?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      MYSQL_USER: ${MYSQL_USER:-home4u}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-home4u_password}
+      JWT_SECRET: ${JWT_SECRET:-home4u-dev-secret-key-please-change-in-production-min-256bit}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./Home4u-frontend
+      dockerfile: Dockerfile
+    container_name: home4u-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  mysql_data:

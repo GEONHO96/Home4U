@@ -6,12 +6,14 @@
 
 공인중개사의 매물 관리부터 구매자의 검색·거래 요청·리뷰까지, 한 곳에서 처리되는 거래 진행 중심형 웹 서비스
 
+[![CI](https://github.com/GEONHO96/Home4U/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/GEONHO96/Home4U/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring_Security-6.x-6DB33F?logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](#docker-배포)
 [![H2](https://img.shields.io/badge/H2-In--Memory-1E90FF?logo=h2&logoColor=white)](https://www.h2database.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 
@@ -22,6 +24,7 @@
 ## 목차
 
 - [프로젝트 소개](#프로젝트-소개)
+- [스크린샷](#스크린샷)
 - [핵심 기능](#핵심-기능)
 - [기술 스택](#기술-스택)
 - [시스템 아키텍처](#시스템-아키텍처)
@@ -30,6 +33,8 @@
 - [클래스 다이어그램](#클래스-다이어그램)
 - [프로젝트 구조](#프로젝트-구조)
 - [실행 방법](#실행-방법)
+- [Docker 배포](#docker-배포)
+- [CI](#ci)
 - [API 명세](#api-명세)
 - [화면 구성](#화면-구성)
 - [거래 상태 전이](#거래-상태-전이)
@@ -49,6 +54,27 @@
 > - 매물 상세 하단에 **별점 + 코멘트 기반 리뷰**로 거래 전 탐색 품질을 높임
 > - **JWT 인증** · **BCrypt 해시** · 응답에서 `password` 필드 자동 차단
 > - **H2 인메모리 기본 프로파일**로 DB 설치 없이 바로 실행, `mysql` 프로파일로 영속 운영
+
+---
+
+## 스크린샷
+
+| 공개 화면 |  |
+|:---------:|:-:|
+| **홈** · 로그인 여부에 따라 네비 변화 | **회원가입** · ROLE 선택 시 추가 필드 노출 |
+| ![home](docs/screenshots/01-home.png) | ![register](docs/screenshots/02-register.png) |
+| **로그인** · 토큰·userId·role 저장 후 `/properties` 이동 | **매물 목록** · 접이식 검색·필터 패널 |
+| ![login](docs/screenshots/03-login.png) | ![list](docs/screenshots/04-property-list.png) |
+
+| 인증 후 화면 |  |
+|:------------:|:-:|
+| **매물 상세** · 모든 필드 + 거래 요청 + 리뷰 평점/작성 | **매물 등록** (공인중개사) · 10+ 필드 + 13종 옵션 |
+| ![detail](docs/screenshots/05-property-detail.png) | ![new](docs/screenshots/06-property-new.png) |
+| **내 거래 내역 (판매자 탭)** · PENDING 에 승인/거절 버튼 쌍 |  |
+| ![me](docs/screenshots/07-transactions-me.png) |  |
+
+> 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
+> 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
 
 ---
 
@@ -570,6 +596,72 @@ export MYSQL_PASSWORD=<your-password>
 | `MYSQL_USER` / `MYSQL_PASSWORD` | MySQL 프로파일 전용 | `mysql` 프로파일일 때 필수 |
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 지도 지오코딩 / OAuth | 선택 |
 | `OPENAI_API_KEY` | 챗봇 | 선택 |
+
+---
+
+## Docker 배포
+
+저장소 루트의 `docker-compose.yml` 하나로 **MySQL + Backend + Frontend(nginx)** 스택을 동시에 기동할 수 있습니다.
+
+### 빠른 실행
+
+```bash
+# 1. (선택) 환경변수 오버라이드
+export JWT_SECRET=$(openssl rand -hex 32)
+export MYSQL_PASSWORD=changeme
+# export NAVER_CLIENT_ID=... / NAVER_CLIENT_SECRET=... / OPENAI_API_KEY=...
+
+# 2. 전체 스택 빌드 + 기동
+docker-compose up --build
+
+# 3. 접속
+# - Frontend : http://localhost:8081
+# - Backend  : http://localhost:8080
+# - MySQL    : localhost:3306 (home4u / ${MYSQL_USER:-home4u} / ${MYSQL_PASSWORD})
+```
+
+### 컨테이너 구성
+
+| 서비스 | 이미지 | 포트 | 특징 |
+|:-------|:-------|:-----|:-----|
+| `mysql` | `mysql:8.0` | 3306 | `home4u` DB 자동 생성, `mysqladmin ping` healthcheck, 볼륨 `mysql_data` 영속화 |
+| `backend` | `Home4u-backend/Dockerfile` (multi-stage: Gradle → JRE 17 Alpine) | 8080 | `SPRING_PROFILES_ACTIVE=mysql`, MySQL healthy 대기 후 기동, 비루트 유저로 실행 |
+| `frontend` | `Home4u-frontend/Dockerfile` (multi-stage: Vite build → nginx 1.27 Alpine) | 8081 → 80 | SPA fallback (`try_files $uri /index.html`), 정적자원 30일 캐시, gzip |
+
+### 개별 이미지 빌드 / 실행
+
+```bash
+# 백엔드만
+docker build -t home4u-backend ./Home4u-backend
+docker run --rm -p 8080:8080 \
+  -e JWT_SECRET=$(openssl rand -hex 32) \
+  -e SPRING_PROFILES_ACTIVE=dev \
+  home4u-backend
+
+# 프론트엔드만 (미리 빌드된 dist 를 nginx 로 서빙)
+docker build -t home4u-frontend ./Home4u-frontend
+docker run --rm -p 8081:80 home4u-frontend
+```
+
+### 운영 체크리스트
+
+- `JWT_SECRET` 는 **32바이트 이상 랜덤** 으로 오버라이드 (개발 기본값 금지)
+- MySQL 비밀번호는 `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD` 로 반드시 교체
+- 프론트엔드는 런타임에 `http://localhost:8080` 을 직접 호출 — 같은 도메인에서 서비스하려면 `Home4u-frontend/src/api/axiosInstance.js` 의 `baseURL` 을 `/api` 로 바꾸고 `nginx.conf` 의 주석 처리된 `location /api/` 프록시를 활성화
+- 뒤 단에 HTTPS/Traefik/CloudFront 등을 둘 경우 CORS 허용 오리진을 `application.properties` 의 `cors.allowed-origins` 로 좁힐 것
+
+---
+
+## CI
+
+`.github/workflows/ci.yml` 이 push · PR 에서 두 개의 job 을 돌립니다.
+
+| Job | 내용 | 부가 산출물 |
+|:----|:-----|:----|
+| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
+| `frontend-build` | Node 20 · `npm ci` · `npm run build` (tsc + vite) | `Home4u-frontend/dist` (artifact: `frontend-dist`) |
+
+상단의 CI 뱃지가 **최신 main 빌드 상태**를 실시간으로 반영합니다. 실패 시 Actions 탭에서 원인 로그를 바로 확인할 수 있습니다.
 
 ---
 

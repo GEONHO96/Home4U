@@ -18,7 +18,10 @@ function TransactionsPage() {
   const myUserIdRaw = localStorage.getItem('userId');
   const myUserId = myUserIdRaw ? Number(myUserIdRaw) : null;
 
-  const [tab, setTab] = useState<Tab>('buyer');
+  // URL ?tab=seller 로 초기 탭을 지정할 수 있게 한다 (공유 / 스크린샷용).
+  const initialTab: Tab =
+    new URLSearchParams(window.location.search).get('tab') === 'seller' ? 'seller' : 'buyer';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [items, setItems] = useState<Transaction[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>screenshot bootstrap</title>
+  </head>
+  <body>
+    <script>
+      // ?token=...&userId=...&role=...&username=...&go=/properties
+      const p = new URLSearchParams(location.search);
+      for (const k of ['token', 'userId', 'username', 'role']) {
+        const v = p.get(k);
+        if (v) localStorage.setItem(k, v);
+      }
+      const go = p.get('go') || '/';
+      location.replace(go);
+    </script>
+    <p>Setting session… redirecting.</p>
+  </body>
+</html>
