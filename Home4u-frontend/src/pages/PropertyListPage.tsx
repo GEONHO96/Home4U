@@ -1,8 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllProperties } from '../api/propertyApi';
-import type { Property } from '../types/property';
-import { PROPERTY_TYPES, TRANSACTION_TYPES } from '../types/property';
+import {
+  filterProperties,
+  getAllProperties,
+  searchPropertiesByCoordinates,
+  type FilterParams,
+} from '../api/propertyApi';
+import type { Property, RoomStructure, TransactionType } from '../types/property';
+import {
+  PROPERTY_TYPES,
+  ROOM_STRUCTURES,
+  TRANSACTION_TYPES,
+} from '../types/property';
 
 function labelOf<T extends string>(
   options: { value: T; label: string }[],
@@ -11,47 +20,179 @@ function labelOf<T extends string>(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
+// 대표 지역 프리셋 (위도/경도 대략 범위). 지도 컴포넌트 도입 전까지의 임시 프리셋.
+const REGION_PRESETS = [
+  { label: '서울 전체', minLat: 37.42, maxLat: 37.70, minLng: 126.76, maxLng: 127.18 },
+  { label: '강남구', minLat: 37.47, maxLat: 37.54, minLng: 127.00, maxLng: 127.10 },
+  { label: '마포구', minLat: 37.54, maxLat: 37.58, minLng: 126.87, maxLng: 126.96 },
+] as const;
+
 function PropertyListPage() {
   const [items, setItems] = useState<Property[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getAllProperties()
-      .then(setItems)
-      .catch((err) => {
-        setError(err.response?.status === 403
-          ? '로그인이 필요합니다.'
-          : err.message ?? '매물을 불러오지 못했습니다.');
-      });
-  }, []);
-
-  if (error) {
-    return (
-      <section>
-        <h2>매물 목록</h2>
-        <p role="alert">{error}</p>
-        <Link to="/login">로그인 페이지로</Link>
-      </section>
-    );
-  }
-
-  if (items === null) {
-    return <p>불러오는 중…</p>;
-  }
+  const [filter, setFilter] = useState<FilterParams>({});
+  const [applied, setApplied] = useState<'none' | 'filter' | 'region'>('none');
+  const [appliedLabel, setAppliedLabel] = useState<string>('');
 
   const role = localStorage.getItem('role');
+
+  const loadAll = useCallback(async () => {
+    setError(null);
+    try {
+      setItems(await getAllProperties());
+      setApplied('none');
+      setAppliedLabel('');
+    } catch (err) {
+      handleErr(err);
+    }
+  }, []);
+
+  const handleErr = (err: unknown) => {
+    const anyErr = err as { response?: { status?: number }; message?: string };
+    if (anyErr?.response?.status === 403) {
+      setError('로그인이 필요합니다.');
+    } else {
+      setError(anyErr?.message ?? '매물을 불러오지 못했습니다.');
+    }
+    setItems([]);
+  };
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleApplyFilter = async () => {
+    setError(null);
+    try {
+      const data = await filterProperties(filter);
+      setItems(data);
+      setApplied('filter');
+      const parts: string[] = [];
+      if (filter.transactionType) parts.push(labelOf(TRANSACTION_TYPES, filter.transactionType));
+      if (filter.roomStructure) parts.push(labelOf(ROOM_STRUCTURES, filter.roomStructure));
+      if (filter.minArea != null || filter.maxArea != null) {
+        parts.push(`${filter.minArea ?? '-'}~${filter.maxArea ?? '-'}㎡`);
+      }
+      if (filter.minFloor != null || filter.maxFloor != null) {
+        parts.push(`${filter.minFloor ?? '-'}~${filter.maxFloor ?? '-'}층`);
+      }
+      setAppliedLabel(parts.length ? `필터: ${parts.join(' · ')}` : '필터: (조건 없음)');
+    } catch (err) {
+      handleErr(err);
+    }
+  };
+
+  const handlePreset = async (preset: typeof REGION_PRESETS[number]) => {
+    setError(null);
+    try {
+      const data = await searchPropertiesByCoordinates(preset);
+      setItems(data);
+      setApplied('region');
+      setAppliedLabel(`지역: ${preset.label}`);
+    } catch (err) {
+      handleErr(err);
+    }
+  };
+
+  const update = <K extends keyof FilterParams>(k: K, v: FilterParams[K]) =>
+    setFilter((prev) => ({ ...prev, [k]: v }));
 
   return (
     <section>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h2>매물 목록</h2>
-        {role === 'ROLE_REALTOR' && (
-          <Link to="/properties/new">+ 매물 등록</Link>
-        )}
+        {role === 'ROLE_REALTOR' && <Link to="/properties/new">+ 매물 등록</Link>}
       </div>
 
-      {items.length === 0 ? (
-        <p>등록된 매물이 아직 없습니다.</p>
+      <details style={{ border: '1px solid #ddd', borderRadius: 4, padding: '0.5rem 0.75rem', marginBottom: '0.75rem' }}>
+        <summary style={{ cursor: 'pointer' }}>검색 · 필터</summary>
+
+        <div style={{ marginTop: '0.75rem' }}>
+          <strong>지역 프리셋</strong>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+            {REGION_PRESETS.map((p) => (
+              <button key={p.label} type="button" onClick={() => handlePreset(p)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <label>
+            거래 유형
+            <select
+              name="transactionType"
+              value={filter.transactionType ?? ''}
+              onChange={(e) => update('transactionType', (e.target.value || undefined) as TransactionType | undefined)}
+            >
+              <option value="">전체</option>
+              {TRANSACTION_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label>
+            방 구조
+            <select
+              name="roomStructure"
+              value={filter.roomStructure ?? ''}
+              onChange={(e) => update('roomStructure', (e.target.value || undefined) as RoomStructure | undefined)}
+            >
+              <option value="">전체</option>
+              {ROOM_STRUCTURES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label>
+            최소 면적 (㎡)
+            <input
+              name="minArea"
+              type="number"
+              value={filter.minArea ?? ''}
+              onChange={(e) => update('minArea', e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+          </label>
+          <label>
+            최대 면적 (㎡)
+            <input
+              name="maxArea"
+              type="number"
+              value={filter.maxArea ?? ''}
+              onChange={(e) => update('maxArea', e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+          </label>
+          <label>
+            최소 층수
+            <input
+              name="minFloor"
+              type="number"
+              value={filter.minFloor ?? ''}
+              onChange={(e) => update('minFloor', e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+          </label>
+          <label>
+            최대 층수
+            <input
+              name="maxFloor"
+              type="number"
+              value={filter.maxFloor ?? ''}
+              onChange={(e) => update('maxFloor', e.target.value === '' ? undefined : Number(e.target.value))}
+            />
+          </label>
+        </div>
+
+        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+          <button type="button" onClick={handleApplyFilter}>필터 적용</button>
+          <button type="button" onClick={() => { setFilter({}); loadAll(); }}>초기화</button>
+        </div>
+      </details>
+
+      {appliedLabel && (
+        <p style={{ fontSize: '0.9em', color: '#555' }} data-testid="applied-label">{appliedLabel}</p>
+      )}
+
+      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
+
+      {items === null ? (
+        <p>불러오는 중…</p>
+      ) : items.length === 0 ? (
+        <p>{applied === 'none' ? '등록된 매물이 아직 없습니다.' : '조건에 맞는 매물이 없습니다.'}</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {items.map((p) => (
