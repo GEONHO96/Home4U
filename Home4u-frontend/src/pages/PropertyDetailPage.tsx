@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPropertyById } from '../api/propertyApi';
 import { requestTransaction } from '../api/transactionApi';
+import ReviewSection from '../components/ReviewSection';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
 
@@ -104,6 +105,8 @@ function PropertyDetailPage() {
           {action.text}
         </p>
       )}
+
+      {item.id && <ReviewSection propertyId={item.id} />}
     </section>
   );
 }
