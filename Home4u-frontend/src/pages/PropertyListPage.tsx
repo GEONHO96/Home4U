@@ -20,7 +20,6 @@ function labelOf<T extends string>(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
-// 대표 지역 프리셋 (위도/경도 대략 범위). 지도 컴포넌트 도입 전까지의 임시 프리셋.
 const REGION_PRESETS = [
   { label: '서울 전체', minLat: 37.42, maxLat: 37.70, minLng: 126.76, maxLng: 127.18 },
   { label: '강남구', minLat: 37.47, maxLat: 37.54, minLng: 127.00, maxLng: 127.10 },
@@ -74,7 +73,7 @@ function PropertyListPage() {
       if (filter.minFloor != null || filter.maxFloor != null) {
         parts.push(`${filter.minFloor ?? '-'}~${filter.maxFloor ?? '-'}층`);
       }
-      setAppliedLabel(parts.length ? `필터: ${parts.join(' · ')}` : '필터: (조건 없음)');
+      setAppliedLabel(parts.length ? parts.join(' · ') : '조건 없음');
     } catch (err) {
       handleErr(err);
     }
@@ -86,7 +85,7 @@ function PropertyListPage() {
       const data = await searchPropertiesByCoordinates(preset);
       setItems(data);
       setApplied('region');
-      setAppliedLabel(`지역: ${preset.label}`);
+      setAppliedLabel(preset.label);
     } catch (err) {
       handleErr(err);
     }
@@ -96,27 +95,55 @@ function PropertyListPage() {
     setFilter((prev) => ({ ...prev, [k]: v }));
 
   return (
-    <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2>매물 목록</h2>
-        {role === 'ROLE_REALTOR' && <Link to="/properties/new">+ 매물 등록</Link>}
+    <section className="container" style={{ padding: '2.25rem 1.25rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>매물 목록</h1>
+          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+            지역과 조건으로 필터링해 원하는 매물을 찾아보세요.
+          </p>
+        </div>
+        {role === 'ROLE_REALTOR' && (
+          <Link
+            to="/properties/new"
+            style={{
+              textDecoration: 'none',
+              padding: '0.55rem 0.95rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-text)',
+              color: 'var(--color-bg-elev)',
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            + 매물 등록
+          </Link>
+        )}
       </div>
 
-      <details style={{ border: '1px solid #ddd', borderRadius: 4, padding: '0.5rem 0.75rem', marginBottom: '0.75rem' }}>
-        <summary style={{ cursor: 'pointer' }}>검색 · 필터</summary>
+      <details className="panel" style={{ marginBottom: '1rem' }} open>
+        <summary>검색 · 필터</summary>
 
-        <div style={{ marginTop: '0.75rem' }}>
-          <strong>지역 프리셋</strong>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
+        <div style={{ marginTop: '0.85rem' }}>
+          <div className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.35rem' }}>지역 프리셋</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
             {REGION_PRESETS.map((p) => (
-              <button key={p.label} type="button" onClick={() => handlePreset(p)}>
+              <button key={p.label} type="button" className="ghost" onClick={() => handlePreset(p)}>
                 {p.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        <div
+          style={{
+            marginTop: '0.85rem',
+            display: 'grid',
+            gap: '0.65rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          }}
+        >
           <label>
             거래 유형
             <select
@@ -177,33 +204,61 @@ function PropertyListPage() {
           </label>
         </div>
 
-        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-          <button type="button" onClick={handleApplyFilter}>필터 적용</button>
-          <button type="button" onClick={() => { setFilter({}); loadAll(); }}>초기화</button>
+        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+          <button type="button" className="accent" onClick={handleApplyFilter}>필터 적용</button>
+          <button type="button" className="ghost" onClick={() => { setFilter({}); loadAll(); }}>초기화</button>
         </div>
       </details>
 
       {appliedLabel && (
-        <p style={{ fontSize: '0.9em', color: '#555' }} data-testid="applied-label">{appliedLabel}</p>
+        <p
+          className="muted"
+          style={{ fontSize: '0.85rem', margin: '0.25rem 0 0.85rem' }}
+          data-testid="applied-label"
+        >
+          {applied === 'region' ? '지역: ' : '필터: '}{appliedLabel}
+        </p>
       )}
 
-      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {items === null ? (
-        <p>불러오는 중…</p>
+        <p className="muted">불러오는 중…</p>
       ) : items.length === 0 ? (
-        <p>{applied === 'none' ? '등록된 매물이 아직 없습니다.' : '조건에 맞는 매물이 없습니다.'}</p>
+        <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+          {applied === 'none' ? '등록된 매물이 아직 없습니다.' : '조건에 맞는 매물이 없습니다.'}
+        </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            display: 'grid',
+            gap: '0.75rem',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          }}
+        >
           {items.map((p) => (
-            <li key={p.id} style={{ border: '1px solid #ddd', padding: '0.75rem', marginBottom: '0.5rem', borderRadius: 4 }}>
-              <Link to={`/properties/${p.id}`} style={{ textDecoration: 'none' }}>
-                <strong>{p.title}</strong>
-                {p.isSold && <span style={{ marginLeft: 8, color: '#c00' }}>[거래완료]</span>}
-                <div style={{ fontSize: '0.9em', color: '#555' }}>
-                  {labelOf(PROPERTY_TYPES, p.propertyType)} · {labelOf(TRANSACTION_TYPES, p.transactionType)} · {p.price.toLocaleString()}만원
-                </div>
-                <div style={{ fontSize: '0.85em', color: '#777' }}>{p.address}</div>
+            <li key={p.id}>
+              <Link
+                to={`/properties/${p.id}`}
+                style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+              >
+                <article className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                    <span className="badge">{labelOf(PROPERTY_TYPES, p.propertyType)}</span>
+                    <span className="badge">{labelOf(TRANSACTION_TYPES, p.transactionType)}</span>
+                    {p.isSold && <span className="badge badge-sold">거래완료</span>}
+                  </div>
+                  <h3 style={{ margin: '0.1rem 0 0.35rem', fontSize: '1.1rem' }}>{p.title}</h3>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', fontWeight: 600 }}>
+                    {p.price.toLocaleString()}<span className="muted" style={{ fontSize: '0.85rem', fontFamily: 'var(--font-sans)' }}> 만원</span>
+                  </div>
+                  <p className="subtle" style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
+                    {p.address}
+                  </p>
+                </article>
               </Link>
             </li>
           ))}

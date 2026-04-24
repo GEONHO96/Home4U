@@ -33,6 +33,7 @@
 - [클래스 다이어그램](#클래스-다이어그램)
 - [프로젝트 구조](#프로젝트-구조)
 - [실행 방법](#실행-방법)
+- [소셜 로그인 설정](#소셜-로그인-설정)
 - [Docker 배포](#docker-배포)
 - [CI](#ci)
 - [API 명세](#api-명세)
@@ -594,8 +595,95 @@ export MYSQL_PASSWORD=<your-password>
 | `JWT_SECRET` | JWT 서명 시크릿 (256bit+) | 운영 필수 (dev 에서는 기본값) |
 | `SPRING_PROFILES_ACTIVE` | `dev` (H2) / `mysql` | 선택 |
 | `MYSQL_USER` / `MYSQL_PASSWORD` | MySQL 프로파일 전용 | `mysql` 프로파일일 때 필수 |
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 지도 지오코딩 / OAuth | 선택 |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 지도 지오코딩 / (구) OAuth 호환 키 | 선택 |
+| `OAUTH_GOOGLE_CLIENT_ID` / `OAUTH_GOOGLE_CLIENT_SECRET` / `OAUTH_GOOGLE_REDIRECT_URI` | Google 소셜 로그인 | 선택 |
+| `OAUTH_KAKAO_CLIENT_ID` / `OAUTH_KAKAO_CLIENT_SECRET` / `OAUTH_KAKAO_REDIRECT_URI` | Kakao 소셜 로그인 | 선택 |
+| `OAUTH_NAVER_CLIENT_ID` / `OAUTH_NAVER_CLIENT_SECRET` / `OAUTH_NAVER_REDIRECT_URI` | Naver 소셜 로그인 | 선택 |
 | `OPENAI_API_KEY` | 챗봇 | 선택 |
+
+---
+
+## 소셜 로그인 설정
+
+Google / Kakao / Naver 세 공급자를 지원합니다. 환경변수가 비어있으면 해당 버튼은 **"미설정"으로 비활성** 되며, 나머지 기본 로그인·가입 기능은 정상 동작합니다.
+
+### 작동 원리
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Browser<br/>(LoginPage)
+    participant F as Frontend<br/>(OAuthCallbackPage)
+    participant B as Backend<br/>(OAuthController/Service)
+    participant P as Provider<br/>(Google/Kakao/Naver)
+
+    U->>B: GET /oauth/{provider}/authorize-url
+    B-->>U: { configured, url }
+    U->>P: redirect to provider auth page
+    P-->>F: redirect /oauth/{provider}/callback?code=...
+    F->>B: GET /oauth/{provider}?code=...
+    B->>P: POST token endpoint (code → access_token)
+    B->>P: GET userinfo (access_token → email)
+    B-->>F: { token, userId, username, role, provider }
+    F->>U: localStorage 세팅 후 /properties 로 이동
+```
+
+### provider 별 콘솔 설정
+
+<details>
+<summary><b>Google</b></summary>
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → OAuth 2.0 Client IDs
+2. Application type: **Web application**
+3. Authorized redirect URI: `http://localhost:5173/oauth/google/callback` (운영 도메인이면 해당 값 추가)
+4. Client ID / Client Secret 을 환경변수에 주입
+```bash
+export OAUTH_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+export OAUTH_GOOGLE_CLIENT_SECRET=xxx
+export OAUTH_GOOGLE_REDIRECT_URI=http://localhost:5173/oauth/google/callback
+```
+
+</details>
+
+<details>
+<summary><b>Kakao</b></summary>
+
+1. [Kakao Developers](https://developers.kakao.com/) → 내 애플리케이션 → 앱 추가
+2. 제품 설정 → **카카오 로그인** → 활성화 → Redirect URI 등록: `http://localhost:5173/oauth/kakao/callback`
+3. 동의항목에서 **카카오계정(이메일)** 을 선택동의로 체크
+4. 앱 설정 → 요약 정보의 **REST API 키** 를 `OAUTH_KAKAO_CLIENT_ID` 로, 보안의 Client Secret(선택) 을 `OAUTH_KAKAO_CLIENT_SECRET` 로 설정
+
+```bash
+export OAUTH_KAKAO_CLIENT_ID=xxx
+export OAUTH_KAKAO_CLIENT_SECRET=xxx   # 선택
+export OAUTH_KAKAO_REDIRECT_URI=http://localhost:5173/oauth/kakao/callback
+```
+
+> 이메일 동의를 거절한 사용자는 `kakao_{id}@home4u.local` 형식의 임시 이메일로 계정이 생성됩니다.
+
+</details>
+
+<details>
+<summary><b>Naver</b></summary>
+
+1. [NAVER Developers](https://developers.naver.com/) → 애플리케이션 등록
+2. 사용 API: **네이버 로그인**, 권한: **회원이름·이메일주소** 필수 체크
+3. Callback URL: `http://localhost:5173/oauth/naver/callback`
+4. 발급된 Client ID / Secret 을 환경변수에 주입
+
+```bash
+export OAUTH_NAVER_CLIENT_ID=xxx
+export OAUTH_NAVER_CLIENT_SECRET=xxx
+export OAUTH_NAVER_REDIRECT_URI=http://localhost:5173/oauth/naver/callback
+```
+
+</details>
+
+### 동작 확인
+
+- 백엔드 재기동 → 프론트엔드 `/login` 접속
+- 각 provider 버튼이 **활성화** 상태로 노출되면 설정 OK (미설정이면 흐릿하게 + 안내문 표시)
+- 버튼 클릭 → provider 동의 화면 → `/oauth/{provider}/callback` 으로 자동 리디렉션 → localStorage 저장 → `/properties` 이동
 
 ---
 

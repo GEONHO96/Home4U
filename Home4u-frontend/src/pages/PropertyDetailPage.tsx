@@ -37,8 +37,12 @@ function PropertyDetailPage() {
       });
   }, [id]);
 
-  if (error) return <p role="alert">{error}</p>;
-  if (!item) return <p>불러오는 중…</p>;
+  if (error) return (
+    <section className="container-narrow" style={{ padding: '2rem 1.25rem' }}>
+      <div className="alert alert-error" role="alert">{error}</div>
+    </section>
+  );
+  if (!item) return <p className="container muted" style={{ padding: '2rem 1.25rem' }}>불러오는 중…</p>;
 
   const isOwner = myUserId != null && myUserId === (item as Property & { ownerId?: number }).ownerId;
 
@@ -58,52 +62,70 @@ function PropertyDetailPage() {
   };
 
   return (
-    <section>
-      <Link to="/properties">← 목록으로</Link>
-      <h2>
-        {item.title}
-        {item.isSold && <span style={{ marginLeft: 8, color: '#c00' }}>[거래완료]</span>}
-      </h2>
+    <section className="container-narrow" style={{ padding: '2rem 1.25rem 3rem' }}>
+      <Link to="/properties" className="muted" style={{ textDecoration: 'none', fontSize: '0.9rem' }}>
+        ← 매물 목록으로
+      </Link>
 
-      <dl>
-        <dt>가격</dt><dd>{item.price.toLocaleString()}만원</dd>
-        <dt>주소</dt><dd>{item.address}</dd>
-        <dt>건물 유형</dt><dd>{labelOf(PROPERTY_TYPES, item.propertyType)}</dd>
-        <dt>거래 유형</dt><dd>{labelOf(TRANSACTION_TYPES, item.transactionType)}</dd>
-        <dt>층수</dt><dd>{item.floor}층</dd>
-        <dt>전용면적</dt><dd>{item.minArea}㎡ ~ {item.maxArea}㎡</dd>
-        {item.roomStructure && (
-          <>
-            <dt>방 구조</dt>
-            <dd>{labelOf(ROOM_STRUCTURES, item.roomStructure)}</dd>
-          </>
-        )}
-        <dt>설명</dt><dd>{item.description}</dd>
-      </dl>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.85rem' }}>
+        <span className="badge">{labelOf(PROPERTY_TYPES, item.propertyType)}</span>
+        <span className="badge">{labelOf(TRANSACTION_TYPES, item.transactionType)}</span>
+        {item.isSold && <span className="badge badge-sold">거래완료</span>}
+      </div>
 
-      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <h1 style={{ margin: '0.45rem 0 0.25rem' }}>{item.title}</h1>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+        {item.price.toLocaleString()}<span className="muted" style={{ fontSize: '0.95rem', fontFamily: 'var(--font-sans)' }}> 만원</span>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>{item.address}</p>
+
+      <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem 1.5rem' }}>
+        <dl className="spec">
+          <dt>건물 유형</dt><dd>{labelOf(PROPERTY_TYPES, item.propertyType)}</dd>
+          <dt>거래 유형</dt><dd>{labelOf(TRANSACTION_TYPES, item.transactionType)}</dd>
+          <dt>층수</dt><dd>{item.floor}층</dd>
+          <dt>전용면적</dt><dd>{item.minArea}㎡ ~ {item.maxArea}㎡</dd>
+          {item.roomStructure && (<><dt>방 구조</dt><dd>{labelOf(ROOM_STRUCTURES, item.roomStructure)}</dd></>)}
+          <dt>설명</dt><dd>{item.description}</dd>
+        </dl>
+      </div>
+
+      <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {myUserId == null && (
-          <Link to="/login">거래하려면 로그인</Link>
+          <Link
+            to="/login"
+            style={{
+              textDecoration: 'none',
+              padding: '0.6rem 1.1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-text)',
+              color: 'var(--color-bg-elev)',
+              fontWeight: 500,
+            }}
+          >
+            거래하려면 로그인
+          </Link>
         )}
         {myUserId != null && !isOwner && !item.isSold && (
-          <button type="button" onClick={handleRequestTransaction} disabled={busy}>
+          <button type="button" className="accent" onClick={handleRequestTransaction} disabled={busy}>
             {busy ? '요청 중…' : '거래 요청하기'}
           </button>
         )}
         {myUserId != null && isOwner && (
-          <button type="button" onClick={() => navigate('/transactions/me')}>
+          <button type="button" onClick={() => navigate('/transactions/me?tab=seller')}>
             내가 받은 거래 요청 보기
           </button>
         )}
       </div>
 
       {action && (
-        <p
+        <div
           role="alert"
-          style={{ marginTop: '0.5rem', color: action.type === 'success' ? '#0a7' : '#c00' }}
+          className={`alert ${action.type === 'success' ? 'alert-success' : 'alert-error'}`}
+          style={{ marginTop: '0.75rem' }}
         >
           {action.text}
-        </p>
+        </div>
       )}
 
       {item.id && <ReviewSection propertyId={item.id} />}

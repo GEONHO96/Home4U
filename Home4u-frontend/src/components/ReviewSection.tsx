@@ -81,23 +81,28 @@ function ReviewSection({ propertyId }: Props) {
   };
 
   return (
-    <section style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #ddd' }}>
-      <h3>리뷰</h3>
+    <section style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--color-border)' }}>
+      <h2 style={{ fontSize: '1.3rem', marginBottom: '0.75rem' }}>리뷰</h2>
 
-      <div style={{ marginBottom: '0.75rem' }}>
+      <div style={{ marginBottom: '0.85rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
         {count === null ? (
-          <span>로딩 중…</span>
+          <span className="muted">로딩 중…</span>
         ) : count === 0 ? (
-          <span>아직 리뷰가 없습니다.</span>
+          <span className="muted">아직 리뷰가 없습니다.</span>
         ) : (
           <>
-            <Stars value={avg ?? 0} /> <strong>{(avg ?? 0).toFixed(1)}</strong>{' '}
-            <span style={{ color: '#555' }}>({count}개)</span>
+            <span style={{ color: 'var(--color-accent-hover)', fontSize: '1.05rem' }}>
+              <Stars value={avg ?? 0} />
+            </span>{' '}
+            <strong style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem' }}>
+              {(avg ?? 0).toFixed(1)}
+            </strong>
+            <span className="subtle">({count}개)</span>
           </>
         )}
       </div>
 
-      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
+      {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '0.65rem' }}>{error}</div>}
 
       {myUserId ? (
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.5rem', maxWidth: 480, marginBottom: '1rem' }}>

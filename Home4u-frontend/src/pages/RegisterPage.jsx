@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from '../api/userApi';
+import SocialLoginButtons from '../components/SocialLoginButtons';
 
 function RegisterPage() {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     username: '',
@@ -18,10 +20,7 @@ function RegisterPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -33,67 +32,89 @@ function RegisterPage() {
       return;
     }
 
+    setSubmitting(true);
     try {
       await registerUser(form);
       navigate('/login');
     } catch (err) {
       setError('회원가입 실패: ' + (err.response?.data?.message || err.message || '알 수 없는 오류'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>회원가입</h2>
-      <input
-        name="username"
-        placeholder="아이디"
-        value={form.username}
-        onChange={handleChange}
-        required
-      />
-      <input
-        name="password"
-        type="password"
-        placeholder="비밀번호"
-        value={form.password}
-        onChange={handleChange}
-        required
-      />
-      <input
-        name="email"
-        placeholder="이메일"
-        value={form.email}
-        onChange={handleChange}
-        required
-      />
-      <input name="phone" placeholder="전화번호" value={form.phone} onChange={handleChange} />
+    <section className="container-narrow" style={{ padding: '3rem 1.25rem' }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+        <h1 style={{ marginBottom: '0.3rem' }}>Home4U 시작하기</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          구매자는 매물 검색과 거래 요청을, 공인중개사는 매물 등록을 바로 시작할 수 있습니다.
+        </p>
+      </div>
 
-      <select name="role" value={form.role} onChange={handleChange}>
-        <option value="ROLE_USER">일반 사용자</option>
-        <option value="ROLE_REALTOR">공인중개사</option>
-      </select>
+      <div className="card" style={{ padding: '1.75rem 1.5rem' }}>
+        <SocialLoginButtons />
+        <div className="divider" style={{ margin: '1.25rem 0' }}>또는 이메일로</div>
 
-      {form.role === 'ROLE_REALTOR' && (
-        <>
-          <input
-            name="licenseNumber"
-            placeholder="중개업자 번호"
-            value={form.licenseNumber}
-            onChange={handleChange}
-          />
-          <input
-            name="agencyName"
-            placeholder="중개업소 이름"
-            value={form.agencyName}
-            onChange={handleChange}
-          />
-        </>
-      )}
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.85rem' }}>
+          <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+            <label>
+              아이디
+              <input name="username" value={form.username} onChange={handleChange} required />
+            </label>
+            <label>
+              비밀번호
+              <input name="password" type="password" value={form.password} onChange={handleChange} required />
+            </label>
+          </div>
 
-      {error && <p role="alert" style={{ color: '#c00' }}>{error}</p>}
+          <label>
+            이메일
+            <input name="email" type="email" value={form.email} onChange={handleChange} required />
+          </label>
+          <label>
+            전화번호 (선택)
+            <input name="phone" value={form.phone} onChange={handleChange} placeholder="010-0000-0000" />
+          </label>
 
-      <button type="submit">회원가입</button>
-    </form>
+          <label>
+            역할
+            <select name="role" value={form.role} onChange={handleChange}>
+              <option value="ROLE_USER">일반 사용자 (구매자)</option>
+              <option value="ROLE_REALTOR">공인중개사</option>
+            </select>
+          </label>
+
+          {form.role === 'ROLE_REALTOR' && (
+            <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+              <label>
+                중개업자 번호
+                <input name="licenseNumber" value={form.licenseNumber} onChange={handleChange} />
+              </label>
+              <label>
+                중개업소 이름
+                <input name="agencyName" value={form.agencyName} onChange={handleChange} />
+              </label>
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-error" role="alert">{error}</div>
+          )}
+
+          <button type="submit" disabled={submitting}>
+            {submitting ? '계정 생성 중…' : '회원가입'}
+          </button>
+        </form>
+
+        <p className="muted" style={{ textAlign: 'center', marginTop: '1rem', marginBottom: 0, fontSize: '0.9rem' }}>
+          이미 계정이 있으신가요?{' '}
+          <Link to="/login" style={{ color: 'var(--color-accent)', textDecorationColor: 'var(--color-accent)' }}>
+            로그인
+          </Link>
+        </p>
+      </div>
+    </section>
   );
 }
 
