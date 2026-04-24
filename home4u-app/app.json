@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Home4U",
+    "slug": "home4u-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "home4u",
+    "platforms": ["ios", "android", "web"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1673ff"
+    },
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.home4u.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1673ff"
+      },
+      "package": "com.home4u.app"
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:8080"
+    }
+  }
+}

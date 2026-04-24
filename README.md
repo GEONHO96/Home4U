@@ -33,6 +33,8 @@
 - [클래스 다이어그램](#클래스-다이어그램)
 - [프로젝트 구조](#프로젝트-구조)
 - [실행 방법](#실행-방법)
+- [PWA](#pwa)
+- [네이티브 앱 (Expo)](#네이티브-앱-expo)
 - [소셜 로그인 설정](#소셜-로그인-설정)
 - [Docker 배포](#docker-배포)
 - [CI](#ci)
@@ -603,6 +605,82 @@ export MYSQL_PASSWORD=<your-password>
 | `OAUTH_KAKAO_CLIENT_ID` / `OAUTH_KAKAO_CLIENT_SECRET` / `OAUTH_KAKAO_REDIRECT_URI` | Kakao 소셜 로그인 | 선택 |
 | `OAUTH_NAVER_CLIENT_ID` / `OAUTH_NAVER_CLIENT_SECRET` / `OAUTH_NAVER_REDIRECT_URI` | Naver 소셜 로그인 | 선택 |
 | `OPENAI_API_KEY` | 챗봇 | 선택 |
+
+---
+
+## PWA
+
+`Home4u-frontend` 는 **Progressive Web App** 으로 빌드됩니다. 모바일 브라우저에서
+"홈 화면에 추가" 로 설치하면 독립 앱처럼 실행되고, 오프라인 상태에서도 최근에 본
+화면이 동작합니다.
+
+### 포함된 것
+
+| 항목 | 내용 |
+|:---|:---|
+| `manifest.webmanifest` | name/short_name, theme_color `#1673ff`, display=standalone, 아이콘 192/512 + maskable |
+| Service Worker (Workbox) | vite-plugin-pwa 가 `generateSW` 모드로 자동 생성 · `registerType: autoUpdate` |
+| 런타임 캐시 | Pretendard CDN `CacheFirst` (30일), Unsplash 이미지 `StaleWhileRevalidate`, OSM 타일 `StaleWhileRevalidate` (7일) |
+| 아이콘 | `Home4u-frontend/public/icons/` (Edge headless 로 SVG → PNG 자동 생성) |
+
+### 설치 확인
+
+```bash
+cd Home4u-frontend
+npm run build
+npm run preview       # :4173 에서 prod 서빙
+```
+
+브라우저 주소창 오른쪽 "앱 설치" 아이콘이 보이면 OK. Lighthouse PWA 카테고리에서 Installable 체크.
+
+---
+
+## 네이티브 앱 (Expo)
+
+`home4u-app/` 디렉토리에 **React Native + Expo** 앱이 포함됩니다.
+기존 Spring Boot 백엔드를 그대로 사용하며, 로그인 / 매물 목록 / 상세 3화면으로 구성된 MVP 입니다.
+
+### 기술 스택
+- Expo SDK 52 · React Native 0.76 · TypeScript
+- React Navigation (Native Stack)
+- Axios (`src/api.ts` 에서 baseURL 과 Bearer 토큰 자동 주입)
+
+### 빠른 실행
+
+```bash
+cd home4u-app
+npm install
+npm start          # Metro 서버 + QR 코드
+```
+
+휴대폰에 **Expo Go** 앱을 설치하고 QR 스캔하면 즉시 실행됩니다.
+
+| 플랫폼 | 명령 | 비고 |
+|:---|:---|:---|
+| Android 에뮬레이터 | `npm run android` | `10.0.2.2:8080` 이 호스트 백엔드 |
+| iOS 시뮬레이터 | `npm run ios` | macOS + Xcode 필요 |
+| 브라우저 (제한적) | `npm run web` | react-native-web 기반 |
+| 클라우드 빌드 | `eas build --platform {android\|ios}` | Windows 에서도 iOS IPA 빌드 가능 (Apple 개발자 계정 필요) |
+
+### Base URL 조정
+
+실기기에서 LAN 으로 연결할 때는 `home4u-app/app.json` 의 `expo.extra.apiBaseUrl` 을
+PC LAN IP (`http://192.168.x.x:8080`) 로 교체하세요.
+
+### 디렉토리
+
+```
+home4u-app/
+├── App.tsx                 # NavigationContainer + Stack
+├── app.json                # Expo 메타 · extra.apiBaseUrl
+├── assets/icon.png         # 공용 아이콘 (웹 PWA 와 동일 소스)
+└── src/
+    ├── api.ts              # axios + 엔드포인트 + 가격 포매터
+    └── screens/
+        ├── LoginScreen.tsx
+        ├── PropertyListScreen.tsx
+        └── PropertyDetailScreen.tsx
+```
 
 ---
 
