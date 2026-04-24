@@ -1,5 +1,6 @@
 package com.piko.home4u.controller;
 
+import com.piko.home4u.dto.RealtorDto;
 import com.piko.home4u.model.Realtor;
 import com.piko.home4u.service.RealtorService;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/realtors")
@@ -42,5 +44,32 @@ public class RealtorController {
     @GetMapping("/gungu/count")
     public ResponseEntity<Long> countRealtorsGungu(@RequestParam String gungu) {
         return ResponseEntity.ok(realtorService.countRealtorsGungu(gungu));
+    }
+
+    // ✅ 중개업자 등록 (body 에 apartmentId 필수)
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> create(@RequestBody RealtorDto dto) {
+        Realtor saved = realtorService.createRealtor(dto);
+        return ResponseEntity.ok(Map.of(
+                "message", "중개업자 등록 성공",
+                "realtorId", saved.getId()
+        ));
+    }
+
+    // ✅ 중개업자 수정
+    @PutMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @RequestBody RealtorDto dto) {
+        Realtor updated = realtorService.updateRealtor(id, dto);
+        return ResponseEntity.ok(Map.of(
+                "message", "중개업자 수정 성공",
+                "realtorId", updated.getId()
+        ));
+    }
+
+    // ✅ 중개업자 삭제
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id) {
+        realtorService.deleteRealtor(id);
+        return ResponseEntity.ok(Map.of("message", "중개업자 삭제 성공"));
     }
 }

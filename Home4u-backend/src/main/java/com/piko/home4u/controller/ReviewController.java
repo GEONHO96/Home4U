@@ -50,6 +50,21 @@ public class ReviewController {
         return ResponseEntity.ok(Map.of("propertyId", propertyId, "reviewCount", reviewCount));
     }
 
+    // ✅ 리뷰 수정 API (본인만)
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<Map<String, Object>> updateReview(
+            @PathVariable Long reviewId,
+            @RequestParam Long userId,
+            @RequestParam int rating,
+            @RequestParam String comment
+    ) {
+        Review updated = reviewService.updateReview(reviewId, userId, rating, comment);
+        return ResponseEntity.ok(Map.of(
+                "message", "리뷰 수정 성공",
+                "reviewId", updated.getId()
+        ));
+    }
+
     // ✅ 리뷰 삭제 API (본인만 삭제 가능)
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Map<String, Object>> deleteReview(@PathVariable Long reviewId, @RequestParam Long userId) {

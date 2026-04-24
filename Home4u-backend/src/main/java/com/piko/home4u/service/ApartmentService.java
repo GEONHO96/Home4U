@@ -65,4 +65,61 @@ public class ApartmentService {
     public List<School> getSchoolsForApartment(Long apartmentId) {
         return schoolRepository.findByApartmentId(apartmentId);
     }
+
+    // ✅ 아파트 등록
+    public Apartment createApartment(com.piko.home4u.dto.ApartmentDto dto) {
+        Apartment apt = Apartment.builder()
+                .name(dto.getName())
+                .address(dto.getAddress())
+                .gungu(dto.getGungu())
+                .dong(dto.getDong())
+                .totalUnits(or0(dto.getTotalUnits()))
+                .totalBuildings(or0(dto.getTotalBuildings()))
+                .totalFloors(or0(dto.getTotalFloors()))
+                .approvalDate(dto.getApprovalDate())
+                .totalParking(or0(dto.getTotalParking()))
+                .floorAreaRatio(orDouble0(dto.getFloorAreaRatio()))
+                .buildingCoverageRatio(orDouble0(dto.getBuildingCoverageRatio()))
+                .constructor(dto.getConstructor())
+                .heatingType(dto.getHeatingType())
+                .latitude(orDouble0(dto.getLatitude()))
+                .longitude(orDouble0(dto.getLongitude()))
+                .areaSizes(dto.getAreaSizes())
+                .build();
+        return apartmentRepository.save(apt);
+    }
+
+    // ✅ 아파트 수정 — null 이 아닌 필드만 패치
+    public Apartment updateApartment(Long id, com.piko.home4u.dto.ApartmentDto dto) {
+        Apartment apt = apartmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("아파트를 찾을 수 없습니다."));
+        if (dto.getName() != null) apt.setName(dto.getName());
+        if (dto.getAddress() != null) apt.setAddress(dto.getAddress());
+        if (dto.getGungu() != null) apt.setGungu(dto.getGungu());
+        if (dto.getDong() != null) apt.setDong(dto.getDong());
+        if (dto.getTotalUnits() != null) apt.setTotalUnits(dto.getTotalUnits());
+        if (dto.getTotalBuildings() != null) apt.setTotalBuildings(dto.getTotalBuildings());
+        if (dto.getTotalFloors() != null) apt.setTotalFloors(dto.getTotalFloors());
+        if (dto.getApprovalDate() != null) apt.setApprovalDate(dto.getApprovalDate());
+        if (dto.getTotalParking() != null) apt.setTotalParking(dto.getTotalParking());
+        if (dto.getFloorAreaRatio() != null) apt.setFloorAreaRatio(dto.getFloorAreaRatio());
+        if (dto.getBuildingCoverageRatio() != null) apt.setBuildingCoverageRatio(dto.getBuildingCoverageRatio());
+        if (dto.getConstructor() != null) apt.setConstructor(dto.getConstructor());
+        if (dto.getHeatingType() != null) apt.setHeatingType(dto.getHeatingType());
+        if (dto.getLatitude() != null) apt.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null) apt.setLongitude(dto.getLongitude());
+        if (dto.getAreaSizes() != null) apt.setAreaSizes(dto.getAreaSizes());
+        return apartmentRepository.save(apt);
+    }
+
+    // ✅ 아파트 삭제
+    public void deleteApartment(Long id) {
+        if (!apartmentRepository.existsById(id)) {
+            throw new RuntimeException("삭제할 아파트가 존재하지 않습니다.");
+        }
+        apartmentRepository.deleteById(id);
+    }
+
+    private static int or0(Integer v) { return v == null ? 0 : v; }
+    private static double orDouble0(Double v) { return v == null ? 0.0 : v; }
 }

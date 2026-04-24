@@ -50,4 +50,25 @@ public class FavoriteService {
     public long countForProperty(Long propertyId) {
         return favoriteRepository.countByPropertyId(propertyId);
     }
+
+    public long countForUser(Long userId) {
+        return favoriteRepository.countByUserId(userId);
+    }
+
+    /**
+     * 찜이 많은 순 상위 매물 (id, 찜 수) 쌍. 최대 50 개로 clamp.
+     * 반환은 Object[] 쌍. 프론트가 쉽게 쓸 수 있도록 LinkedHashMap 리스트로 매핑한다.
+     */
+    public List<java.util.Map<String, Object>> mostFavorited(int limit) {
+        int capped = Math.max(1, Math.min(limit, 50));
+        var page = org.springframework.data.domain.PageRequest.of(0, capped);
+        return favoriteRepository.findMostFavoritedPropertyIds(page).stream()
+                .map(row -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("propertyId", ((Number) row[0]).longValue());
+                    m.put("favoriteCount", ((Number) row[1]).longValue());
+                    return m;
+                })
+                .toList();
+    }
 }

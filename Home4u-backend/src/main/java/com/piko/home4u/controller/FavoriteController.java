@@ -62,4 +62,21 @@ public class FavoriteController {
                 "count", favoriteService.countForProperty(propertyId)
         ));
     }
+
+    // ✅ 내가 찜한 매물 개수
+    @GetMapping("/me/count")
+    public ResponseEntity<Map<String, Object>> countMine(@RequestParam Long userId) {
+        return ResponseEntity.ok(Map.of(
+                "userId", userId,
+                "count", favoriteService.countForUser(userId)
+        ));
+    }
+
+    // ✅ 찜이 많은 매물 랭킹
+    //   GET /favorites/ranking?limit=6
+    //   응답: [{propertyId, favoriteCount}, ...]
+    @GetMapping("/ranking")
+    public ResponseEntity<List<Map<String, Object>>> ranking(@RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(favoriteService.mostFavorited(limit));
+    }
 }

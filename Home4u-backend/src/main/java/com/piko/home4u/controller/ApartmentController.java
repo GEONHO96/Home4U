@@ -1,5 +1,6 @@
 package com.piko.home4u.controller;
 
+import com.piko.home4u.dto.ApartmentDto;
 import com.piko.home4u.dto.ConstructorHeatingDto;
 import com.piko.home4u.dto.RatioDto;
 import com.piko.home4u.model.Apartment;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/apartments")
@@ -58,5 +60,32 @@ public class ApartmentController {
     @GetMapping("/{apartmentId}/schools")
     public ResponseEntity<List<School>> getSchools(@PathVariable Long apartmentId) {
         return ResponseEntity.ok(apartmentService.getSchoolsForApartment(apartmentId));
+    }
+
+    // ✅ 아파트 등록
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> create(@RequestBody ApartmentDto dto) {
+        Apartment saved = apartmentService.createApartment(dto);
+        return ResponseEntity.ok(Map.of(
+                "message", "아파트 등록 성공",
+                "apartmentId", saved.getId()
+        ));
+    }
+
+    // ✅ 아파트 수정 (PATCH 의미: null 이 아닌 필드만 교체)
+    @PutMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> update(@PathVariable Long id, @RequestBody ApartmentDto dto) {
+        Apartment updated = apartmentService.updateApartment(id, dto);
+        return ResponseEntity.ok(Map.of(
+                "message", "아파트 수정 성공",
+                "apartmentId", updated.getId()
+        ));
+    }
+
+    // ✅ 아파트 삭제
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id) {
+        apartmentService.deleteApartment(id);
+        return ResponseEntity.ok(Map.of("message", "아파트 삭제 성공"));
     }
 }

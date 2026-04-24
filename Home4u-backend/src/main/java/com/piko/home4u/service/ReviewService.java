@@ -53,6 +53,22 @@ public class ReviewService {
         return reviewRepository.countReviewsByPropertyId(propertyId);
     }
 
+    // ✅ 특정 리뷰 수정 (본인만 수정 가능)
+    @Transactional
+    public Review updateReview(Long reviewId, Long userId, int rating, String comment) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("리뷰를 찾을 수 없습니다."));
+        if (!review.getUser().getId().equals(userId)) {
+            throw new RuntimeException("본인이 작성한 리뷰만 수정할 수 있습니다.");
+        }
+        if (rating < 1 || rating > 5) {
+            throw new RuntimeException("별점은 1~5 사이여야 합니다.");
+        }
+        review.setRating(rating);
+        review.setComment(comment);
+        return reviewRepository.save(review);
+    }
+
     // ✅ 특정 리뷰 삭제 (본인만 삭제 가능)
     @Transactional
     public void deleteReview(Long reviewId, Long userId) {

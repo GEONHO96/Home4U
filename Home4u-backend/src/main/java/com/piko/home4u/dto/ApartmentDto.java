@@ -5,28 +5,31 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
- * 데이터 전송 객체(DTO) for Apartment 정보를 전달합니다.
+ * Apartment 생성/수정용 입력 DTO. id 는 수정 응답에만 쓰인다.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ApartmentDto {
-    /** 고유 식별자 */
     private Long id;
-
-    /** 아파트 이름 */
     private String name;
-
-    /** 주소 */
     private String address;
-
-    /** 위도 */
+    private String gungu;
+    private String dong;
+    private Integer totalUnits;
+    private Integer totalBuildings;
+    private Integer totalFloors;
+    private String approvalDate;
+    private Integer totalParking;
+    private Double floorAreaRatio;
+    private Double buildingCoverageRatio;
+    private String constructor;
+    private String heatingType;
     private Double latitude;
-
-    /** 경도 */
     private Double longitude;
-
-    // TODO: 필요 시 기타 필드 추가 (예: 가격, 면적, 방 구조 등)
+    private List<Double> areaSizes;
 }

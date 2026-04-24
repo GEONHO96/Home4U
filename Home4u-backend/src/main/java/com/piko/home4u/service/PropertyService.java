@@ -50,6 +50,12 @@ public class PropertyService {
         return propertyRepository.findAll();
     }
 
+    // ✅ 페이지네이션 조회 (?page=0&size=20&sort=id,desc)
+    public org.springframework.data.domain.Page<Property> getPagedProperties(
+            org.springframework.data.domain.Pageable pageable) {
+        return propertyRepository.findAll(pageable);
+    }
+
     // ✅ 특정 매물 조회
     public Property getPropertyById(Long id) {
         return propertyRepository.findById(id)
@@ -113,6 +119,18 @@ public class PropertyService {
     // ✅ 특정 소유자의 매물 목록
     public List<Property> getPropertiesByOwner(Long ownerId) {
         return propertyRepository.findByOwnerIdOrderByIdDesc(ownerId);
+    }
+
+    // ✅ 찜이 많은 매물 상위 N — 랭킹 id 리스트를 받아 매물 엔티티를 랭킹 순서대로 반환
+    public List<Property> getMostFavoritedProperties(
+            List<java.util.Map<String, Object>> ranking) {
+        if (ranking == null || ranking.isEmpty()) return List.of();
+        java.util.List<Long> ids = ranking.stream()
+                .map(r -> ((Number) r.get("propertyId")).longValue())
+                .toList();
+        java.util.Map<Long, Property> byId = propertyRepository.findAllById(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(Property::getId, p -> p));
+        return ids.stream().map(byId::get).filter(java.util.Objects::nonNull).toList();
     }
 
     // ✅ 매물 거래 요청 (구매자가 매물 거래 요청)

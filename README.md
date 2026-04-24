@@ -831,7 +831,7 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | Job | 내용 | 부가 산출물 |
 |:----|:-----|:----|
-| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 14 · 서비스 단위 30 = **44 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
+| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 20 · 서비스 단위 33 = **53 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
 | `frontend-build` | Node 20 · `npm ci` · `npm run build` (tsc + vite) | `Home4u-frontend/dist` (artifact: `frontend-dist`) |
 
 상단의 CI 뱃지가 **최신 main 빌드 상태**를 실시간으로 반영합니다. 실패 시 Actions 탭에서 원인 로그를 바로 확인할 수 있습니다.
@@ -848,13 +848,13 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | 카테고리 | 수 | 주요 경로 |
 |:---------|:---|:---------|
-| 사용자 | 10 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록, **내 매물**, **비밀번호 변경** |
-| 매물 | 10 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절, **수정(PUT)**, **인기(popular)** |
-| 거래 | 6 | 구매자/판매자/상태/기간/매물 + **내 거래 요약(summary)** |
-| 리뷰 | 5 | 작성, 조회, 평균 평점, 개수, 삭제 |
-| 찜(Favorite) | 5 | 추가, 삭제, 체크, 내 목록, 매물별 카운트 |
-| 아파트 | 8 | 이름/구/동/용적률·건폐율/중개사·학교 |
-| 중개업자 | 5 | 아파트/이름/전화/지역 |
+| 사용자 | 10 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록, 내 매물, 비밀번호 변경 |
+| 매물 | 12 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절, 수정(PUT), 인기(popular), **페이지네이션(`/page`)**, **인기 찜(`/most-favorited`)** |
+| 거래 | 6 | 구매자/판매자/상태/기간/매물 + 내 거래 요약(summary) |
+| 리뷰 | 6 | 작성, 조회, 평균 평점, 개수, **수정(PUT)**, 삭제 |
+| 찜(Favorite) | 7 | 추가, 삭제, 체크, 내 목록, 매물별 카운트, **내 카운트**, **랭킹** |
+| 아파트 | 11 | 조회 8 + **CRUD 3** (POST/PUT/DELETE) |
+| 중개업자 | 8 | 조회 5 + **CRUD 3** (POST/PUT/DELETE) |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |
 
 <details>
@@ -931,7 +931,9 @@ docker run --rm -p 8081:80 home4u-frontend
 | 메서드 | 경로 | 설명 |
 |:-------|:-----|:-----|
 | GET | `/properties` | 전체 목록 |
+| GET | `/properties/page?page=0&size=20&sort=id,desc` | Spring Data `Page<Property>` (content / totalElements / totalPages) |
 | GET | `/properties/popular?limit=6` | 조회수 내림차순 인기 매물 (기본 6, 최대 50) |
+| GET | `/properties/most-favorited?limit=6` | 찜 수 많은 순 인기 매물 (FavoriteService 랭킹 기반) |
 | PUT | `/properties/{id}?editorId=…` | 매물 수정 (등록자 본인만 허용) |
 | DELETE | `/properties/{id}` | 매물 삭제 |
 | POST | `/properties/{id}/transactions?buyerId={}` | 거래 요청 (seller 는 매물 소유자로 자동 설정) |
@@ -963,6 +965,7 @@ docker run --rm -p 8081:80 home4u-frontend
 | GET | `/reviews/{propertyId}` | 매물의 리뷰 목록 (최신순) |
 | GET | `/reviews/{propertyId}/rating` | 평균 평점 |
 | GET | `/reviews/{propertyId}/count` | 리뷰 개수 |
+| PUT | `/reviews/{reviewId}?userId&rating&comment` | 리뷰 수정 (본인만, rating 1~5) |
 | DELETE | `/reviews/{reviewId}?userId={id}` | 리뷰 삭제 (본인만) |
 
 </details>
@@ -970,8 +973,9 @@ docker run --rm -p 8081:80 home4u-frontend
 <details>
 <summary><b>5. 기타 API (프론트 UI 로드맵 대상)</b></summary>
 
-- **/apartments** 아파트 검색 (이름·구·동·용적률/건폐율·주변 중개사·학교)
-- **/realtors** 중개업자 검색 (아파트·이름·전화·지역)
+- **/apartments** 아파트 검색 + CRUD (`POST /apartments`, `PUT /apartments/{id}`, `DELETE /apartments/{id}`; PUT 은 null 이 아닌 필드만 교체)
+- **/realtors** 중개업자 검색 + CRUD (`POST /realtors` body 에 `apartmentId` 필수)
+- **/favorites/me/count** 내 찜 개수 · **/favorites/ranking** 찜 수 많은 매물 id 랭킹
 - **/posts** 커뮤니티 게시글 (CRUD · 좋아요 · 카테고리 · Top Liked/Viewed · 검색)
 - **/faqs** FAQ (전체·카테고리·키워드 검색)
 - **/oauth/{google|kakao|naver}** 소셜 로그인

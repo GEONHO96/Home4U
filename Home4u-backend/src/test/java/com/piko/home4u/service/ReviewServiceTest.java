@@ -116,4 +116,35 @@ class ReviewServiceTest {
         assertThatThrownBy(() -> service.deleteReview(1L, 1L))
                 .hasMessageContaining("리뷰");
     }
+
+    @Test
+    void updateReview_ownerUpdatesFields() {
+        Review r = Review.builder().id(5L).user(user(10L)).rating(3).comment("old").build();
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(r));
+        when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Review updated = service.updateReview(5L, 10L, 5, "new");
+
+        assertThat(updated.getRating()).isEqualTo(5);
+        assertThat(updated.getComment()).isEqualTo("new");
+    }
+
+    @Test
+    void updateReview_differentUser_throws() {
+        Review r = Review.builder().id(5L).user(user(10L)).rating(3).comment("old").build();
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(r));
+
+        assertThatThrownBy(() -> service.updateReview(5L, 99L, 5, "x"))
+                .hasMessageContaining("본인");
+        verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void updateReview_ratingOutOfRange_throws() {
+        Review r = Review.builder().id(5L).user(user(10L)).rating(3).comment("old").build();
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(r));
+
+        assertThatThrownBy(() -> service.updateReview(5L, 10L, 0, "x"))
+                .hasMessageContaining("1~5");
+    }
 }

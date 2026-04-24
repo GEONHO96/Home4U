@@ -2,6 +2,7 @@ package com.piko.home4u;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.ApartmentController;
+import com.piko.home4u.controller.FavoriteController;
 import com.piko.home4u.controller.OAuthController;
 import com.piko.home4u.controller.PropertyController;
 import com.piko.home4u.controller.RealtorController;
@@ -20,6 +21,7 @@ import com.piko.home4u.model.TransactionType;
 import com.piko.home4u.model.UserRole;
 import com.piko.home4u.controller.TransactionController;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.OAuthService;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.RealtorService;
@@ -73,6 +75,7 @@ class Home4UTests {
     @Mock private RealtorService realtorService;
     @Mock private OAuthService oAuthService;
     @Mock private TransactionService transactionService;
+    @Mock private FavoriteService favoriteService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -82,6 +85,7 @@ class Home4UTests {
     @InjectMocks private RealtorController realtorController;
     @InjectMocks private OAuthController oAuthController;
     @InjectMocks private TransactionController transactionController;
+    @InjectMocks private FavoriteController favoriteController;
 
     @BeforeEach
     void setUp() {
@@ -93,8 +97,11 @@ class Home4UTests {
                         reviewController,
                         oAuthController,
                         realtorController,
-                        transactionController
+                        transactionController,
+                        favoriteController
                 )
+                .setCustomArgumentResolvers(
+                        new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter())
                 .build();
     }
@@ -209,6 +216,95 @@ class Home4UTests {
                 .andExpect(jsonPath("$.provider").value("google"))
                 .andExpect(jsonPath("$.configured").value(false))
                 .andExpect(jsonPath("$.url").value(""));
+    }
+
+    // ---- 2차 신규 API 6종 ----
+
+    @Test
+    void propertiesPaged_returnsPageMetadata() throws Exception {
+        org.springframework.data.domain.Page<Property> page =
+                new org.springframework.data.domain.PageImpl<>(
+                        List.of(),
+                        org.springframework.data.domain.PageRequest.of(0, 20),
+                        0L);
+        when(propertyService.getPagedProperties(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/properties/page").param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.size").value(20));
+    }
+
+    @Test
+    void updateReview_returnsSuccessMessage() throws Exception {
+        Review r = Review.builder().id(7L).rating(5).comment("new").build();
+        when(reviewService.updateReview(org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(2L),
+                org.mockito.ArgumentMatchers.eq(5),
+                org.mockito.ArgumentMatchers.eq("new")))
+                .thenReturn(r);
+
+        mockMvc.perform(put("/reviews/{reviewId}", 7L)
+                        .param("userId", "2")
+                        .param("rating", "5")
+                        .param("comment", "new"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reviewId").value(7))
+                .andExpect(jsonPath("$.message").value("리뷰 수정 성공"));
+    }
+
+    @Test
+    void myFavoriteCount_returnsCount() throws Exception {
+        when(favoriteService.countForUser(2L)).thenReturn(3L);
+
+        mockMvc.perform(get("/favorites/me/count").param("userId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(2))
+                .andExpect(jsonPath("$.count").value(3));
+    }
+
+    @Test
+    void favoriteRanking_returnsPropertyIdCountPairs() throws Exception {
+        java.util.LinkedHashMap<String, Object> row = new java.util.LinkedHashMap<>();
+        row.put("propertyId", 42L);
+        row.put("favoriteCount", 7L);
+        when(favoriteService.mostFavorited(6)).thenReturn(List.of(row));
+
+        mockMvc.perform(get("/favorites/ranking").param("limit", "6"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].propertyId").value(42))
+                .andExpect(jsonPath("$[0].favoriteCount").value(7));
+    }
+
+    @Test
+    void apartmentCreate_returnsId() throws Exception {
+        Apartment apt = new Apartment();
+        apt.setId(9L);
+        apt.setName("Sky");
+        when(apartmentService.createApartment(org.mockito.ArgumentMatchers.any())).thenReturn(apt);
+
+        mockMvc.perform(post("/apartments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Sky\",\"address\":\"addr\",\"gungu\":\"g\",\"dong\":\"d\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apartmentId").value(9))
+                .andExpect(jsonPath("$.message").value("아파트 등록 성공"));
+    }
+
+    @Test
+    void realtorCreate_returnsId() throws Exception {
+        Realtor r = new Realtor();
+        r.setId(11L);
+        r.setName("Top");
+        when(realtorService.createRealtor(org.mockito.ArgumentMatchers.any())).thenReturn(r);
+
+        mockMvc.perform(post("/realtors")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"apartmentId\":1,\"name\":\"Top\",\"phoneNumber\":\"010\",\"address\":\"a\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.realtorId").value(11))
+                .andExpect(jsonPath("$.message").value("중개업자 등록 성공"));
     }
 
     // ---- 신규 API 5종 ----

@@ -3,6 +3,7 @@ package com.piko.home4u.controller;
 import com.piko.home4u.dto.PropertyDto;
 import com.piko.home4u.dto.PropertyResponseDto;
 import com.piko.home4u.model.*;
+import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.PropertyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PropertyController {
     private final PropertyService propertyService;
+    private final FavoriteService favoriteService;
     private final MessageSource messageSource;
 
     // ✅ 매물 등록 API
@@ -35,6 +37,17 @@ public class PropertyController {
     @GetMapping
     public ResponseEntity<List<Property>> getProperties() {
         return ResponseEntity.ok(propertyService.getAllProperties());
+    }
+
+    // ✅ 페이지네이션 조회 API
+    //   GET /properties/page?page=0&size=20&sort=id,desc
+    //   응답: Spring Data Page JSON (content, totalElements, totalPages, number, size, ...)
+    @GetMapping("/page")
+    public ResponseEntity<org.springframework.data.domain.Page<Property>> getPagedProperties(
+            @org.springframework.data.web.PageableDefault(size = 20, sort = "id",
+                    direction = org.springframework.data.domain.Sort.Direction.DESC)
+            org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(propertyService.getPagedProperties(pageable));
     }
 
     // ✅ 매물 상세 조회 API (다국어 지원 + DTO + 예외 처리)
@@ -118,6 +131,13 @@ public class PropertyController {
     @GetMapping("/popular")
     public ResponseEntity<List<Property>> popular(@RequestParam(defaultValue = "6") int limit) {
         return ResponseEntity.ok(propertyService.getPopularProperties(limit));
+    }
+
+    // ✅ 인기 찜 매물 (찜 수 많은 순, FavoriteService 가 계산한 id 랭킹을 기반으로)
+    @GetMapping("/most-favorited")
+    public ResponseEntity<List<Property>> mostFavorited(@RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(
+                propertyService.getMostFavoritedProperties(favoriteService.mostFavorited(limit)));
     }
 
     // ✅ 지도 기반 검색 API
