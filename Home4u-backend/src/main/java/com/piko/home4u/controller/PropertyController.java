@@ -58,6 +58,8 @@ public class PropertyController {
         if (property == null) {
             return ResponseEntity.notFound().build();
         }
+        // 상세 조회 시 조회수 증가
+        propertyService.incrementViews(property);
 
         PropertyResponseDto dto = PropertyResponseDto.builder()
                 .id(property.getId())
@@ -77,6 +79,8 @@ public class PropertyController {
                 .maxArea(property.getMaxArea())
                 .additionalOptions(property.getAdditionalOptions())
                 .isSold(property.isSold())
+                .imageUrl(property.getImageUrl())
+                .views(property.getViews())
                 .ownerId(property.getOwner() != null ? property.getOwner().getId() : null)
                 .localizedMessages(Map.of(
                         "title",           messageSource.getMessage("property.title",           null, locale),

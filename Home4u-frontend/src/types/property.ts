@@ -91,11 +91,13 @@ export interface PropertyCreateRequest {
   transactionType: TransactionType;
   roomStructure?: RoomStructure;
   additionalOptions?: AdditionalOption[];
+  imageUrl?: string;
 }
 
 export interface Property extends PropertyCreateRequest {
   id: number;
   isSold: boolean;
+  views?: number;
   owner?: {
     id: number;
     username: string;

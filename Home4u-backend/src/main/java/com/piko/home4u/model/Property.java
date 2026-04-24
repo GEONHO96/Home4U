@@ -82,4 +82,11 @@ public class Property {
     @JsonProperty("isSold")
     @Builder.Default
     private boolean isSold = false; // 거래 완료 여부 (JSON 필드명: "isSold")
+
+    @Column(length = 1024)
+    private String imageUrl; // 대표 이미지 URL (선택)
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int views = 0; // 상세 조회수
 }

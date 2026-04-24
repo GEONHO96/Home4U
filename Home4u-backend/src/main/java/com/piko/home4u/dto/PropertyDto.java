@@ -34,4 +34,6 @@ public class PropertyDto {
 
     private RoomStructure roomStructure;
     private List<AdditionalOption> additionalOptions;
+
+    private String imageUrl;
 }

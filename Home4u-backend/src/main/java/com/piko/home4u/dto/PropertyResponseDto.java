@@ -45,5 +45,7 @@ public class PropertyResponseDto {
     @JsonProperty("isSold")
     private boolean isSold;
     private Long ownerId;
+    private String imageUrl;
+    private int views;
     private Map<String, String> localizedMessages;
 }

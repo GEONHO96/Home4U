@@ -31,6 +31,7 @@ const INITIAL: PropertyCreateRequest = {
   transactionType: 'SALE',
   roomStructure: undefined,
   additionalOptions: [],
+  imageUrl: '',
 };
 
 function PropertyCreatePage() {
@@ -121,6 +122,15 @@ function PropertyCreatePage() {
           <label>
             주소
             <input required value={form.address} onChange={(e) => update('address', e.target.value)} />
+          </label>
+          <label>
+            대표 이미지 URL (선택)
+            <input
+              type="url"
+              value={form.imageUrl ?? ''}
+              onChange={(e) => update('imageUrl', e.target.value || undefined)}
+              placeholder="https://..."
+            />
           </label>
           <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
             <label>

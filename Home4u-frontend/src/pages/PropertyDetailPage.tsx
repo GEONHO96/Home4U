@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPropertyById } from '../api/propertyApi';
 import { requestTransaction } from '../api/transactionApi';
 import ReviewSection from '../components/ReviewSection';
+import FavoriteButton from '../components/FavoriteButton';
+import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
 
@@ -11,6 +13,14 @@ function labelOf<T extends string>(
   value: T,
 ): string {
   return options.find((o) => o.value === value)?.label ?? value;
+}
+
+function formatPriceHuman(price: number): string {
+  if (price >= 10000) {
+    const eok = price / 10000;
+    return eok >= 10 ? `${Math.round(eok)}억` : `${eok.toFixed(1).replace(/\.0$/, '')}억`;
+  }
+  return `${price.toLocaleString()}만원`;
 }
 
 type ActionMsg = { type: 'success' | 'error'; text: string };
@@ -29,7 +39,10 @@ function PropertyDetailPage() {
   useEffect(() => {
     if (!id) return;
     getPropertyById(Number(id))
-      .then(setItem)
+      .then((p) => {
+        setItem(p);
+        pushRecentlyViewed(p);
+      })
       .catch((err) => {
         setError(err.response?.status === 403
           ? '로그인이 필요합니다.'
@@ -45,6 +58,7 @@ function PropertyDetailPage() {
   if (!item) return <p className="container muted" style={{ padding: '2rem 1.25rem' }}>불러오는 중…</p>;
 
   const isOwner = myUserId != null && myUserId === (item as Property & { ownerId?: number }).ownerId;
+  const views = (item as Property & { views?: number }).views ?? 0;
 
   const handleRequestTransaction = async () => {
     if (!myUserId || !item.id) return;
@@ -62,52 +76,66 @@ function PropertyDetailPage() {
   };
 
   return (
-    <section className="container-narrow" style={{ padding: '2rem 1.25rem 3rem' }}>
-      <Link to="/properties" className="muted" style={{ textDecoration: 'none', fontSize: '0.9rem' }}>
-        ← 매물 목록으로
+    <section className="container-narrow" style={{ padding: '1.5rem 1.25rem 3rem' }}>
+      <Link to="/properties" className="muted" style={{ textDecoration: 'none', fontSize: '0.85rem' }}>
+        ← 매물 목록
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.85rem' }}>
-        <span className="badge">{labelOf(PROPERTY_TYPES, item.propertyType)}</span>
-        <span className="badge">{labelOf(TRANSACTION_TYPES, item.transactionType)}</span>
-        {item.isSold && <span className="badge badge-sold">거래완료</span>}
+      <div className="card" style={{ marginTop: '0.75rem' }}>
+        <div className="thumb" style={{ aspectRatio: '16/9' }}>
+          {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>이미지 없음</span>}
+        </div>
+        <div className="card-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+            <span className="badge">{labelOf(PROPERTY_TYPES, item.propertyType)}</span>
+            <span className="badge badge-accent">{labelOf(TRANSACTION_TYPES, item.transactionType)}</span>
+            {item.isSold && <span className="badge badge-sold">거래완료</span>}
+            <span style={{ flex: 1 }} />
+            {item.id && <FavoriteButton propertyId={item.id} />}
+          </div>
+
+          <h1 style={{ margin: '0.25rem 0 0.2rem', fontSize: '1.45rem' }}>{item.title}</h1>
+          <div className="price" style={{ fontSize: '1.7rem', marginBottom: '0.25rem' }}>
+            {formatPriceHuman(item.price)}
+          </div>
+          <p className="muted" style={{ margin: 0 }}>{item.address}</p>
+          <div className="subtle" style={{ marginTop: '0.35rem', fontSize: '0.8rem' }}>
+            조회 {views.toLocaleString()}회
+          </div>
+        </div>
       </div>
 
-      <h1 style={{ margin: '0.45rem 0 0.25rem' }}>{item.title}</h1>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-        {item.price.toLocaleString()}<span className="muted" style={{ fontSize: '0.95rem', fontFamily: 'var(--font-sans)' }}> 만원</span>
-      </div>
-      <p className="muted" style={{ margin: 0 }}>{item.address}</p>
-
-      <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem 1.5rem' }}>
-        <dl className="spec">
-          <dt>건물 유형</dt><dd>{labelOf(PROPERTY_TYPES, item.propertyType)}</dd>
-          <dt>거래 유형</dt><dd>{labelOf(TRANSACTION_TYPES, item.transactionType)}</dd>
-          <dt>층수</dt><dd>{item.floor}층</dd>
-          <dt>전용면적</dt><dd>{item.minArea}㎡ ~ {item.maxArea}㎡</dd>
-          {item.roomStructure && (<><dt>방 구조</dt><dd>{labelOf(ROOM_STRUCTURES, item.roomStructure)}</dd></>)}
-          <dt>설명</dt><dd>{item.description}</dd>
-        </dl>
+      <div className="card" style={{ marginTop: '0.85rem' }}>
+        <div className="card-body">
+          <dl className="spec">
+            <dt>건물 유형</dt><dd>{labelOf(PROPERTY_TYPES, item.propertyType)}</dd>
+            <dt>거래 유형</dt><dd>{labelOf(TRANSACTION_TYPES, item.transactionType)}</dd>
+            <dt>층수</dt><dd>{item.floor}층</dd>
+            <dt>전용면적</dt><dd>{item.minArea}㎡ ~ {item.maxArea}㎡</dd>
+            {item.roomStructure && (<><dt>방 구조</dt><dd>{labelOf(ROOM_STRUCTURES, item.roomStructure)}</dd></>)}
+            <dt>설명</dt><dd>{item.description}</dd>
+          </dl>
+        </div>
       </div>
 
-      <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {myUserId == null && (
           <Link
             to="/login"
             style={{
               textDecoration: 'none',
-              padding: '0.6rem 1.1rem',
+              padding: '0.55rem 1.1rem',
               borderRadius: 'var(--radius-md)',
-              background: 'var(--color-text)',
-              color: 'var(--color-bg-elev)',
-              fontWeight: 500,
+              background: 'var(--color-accent)',
+              color: '#fff',
+              fontWeight: 600,
             }}
           >
             거래하려면 로그인
           </Link>
         )}
         {myUserId != null && !isOwner && !item.isSold && (
-          <button type="button" className="accent" onClick={handleRequestTransaction} disabled={busy}>
+          <button type="button" className="primary" onClick={handleRequestTransaction} disabled={busy}>
             {busy ? '요청 중…' : '거래 요청하기'}
           </button>
         )}

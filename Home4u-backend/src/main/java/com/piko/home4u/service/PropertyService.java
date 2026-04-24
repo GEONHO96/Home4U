@@ -37,6 +37,7 @@ public class PropertyService {
                 .additionalOptions(propertyDto.getAdditionalOptions())
                 .propertyType(propertyDto.getPropertyType())
                 .transactionType(propertyDto.getTransactionType())
+                .imageUrl(propertyDto.getImageUrl())
                 .isSold(false)
                 .owner(owner)
                 .build();
@@ -53,6 +54,12 @@ public class PropertyService {
     public Property getPropertyById(Long id) {
         return propertyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("매물을 찾을 수 없습니다."));
+    }
+
+    // ✅ 상세 조회 시 조회수 증가
+    public void incrementViews(Property property) {
+        property.setViews(property.getViews() + 1);
+        propertyRepository.save(property);
     }
 
     // ✅ 매물 삭제

@@ -7,6 +7,7 @@ import PropertyListPage from './pages/PropertyListPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
 import PropertyCreatePage from './pages/PropertyCreatePage';
 import TransactionsPage from './pages/TransactionsPage';
+import FavoritesPage from './pages/FavoritesPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import './App.css';
 
@@ -21,6 +22,7 @@ function App() {
         <Route path="/properties/new" element={<PropertyCreatePage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />
         <Route path="/transactions/me" element={<TransactionsPage />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
       </Route>
     </Routes>
