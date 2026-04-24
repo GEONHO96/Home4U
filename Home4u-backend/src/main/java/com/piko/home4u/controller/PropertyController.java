@@ -94,11 +94,30 @@ public class PropertyController {
         return ResponseEntity.ok(dto);
     }
 
+    // ✅ 매물 수정 API (본인 소유 매물만)
+    @PutMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> updateProperty(
+            @PathVariable Long id,
+            @RequestParam Long editorId,
+            @RequestBody PropertyDto dto) {
+        Property updated = propertyService.updateProperty(id, editorId, dto);
+        return ResponseEntity.ok(Map.of(
+                "message", "매물 수정 성공",
+                "propertyId", updated.getId()
+        ));
+    }
+
     // ✅ 매물 삭제 API
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteProperty(@PathVariable Long id) {
         propertyService.deleteProperty(id);
         return ResponseEntity.ok(Map.of("message", "매물 삭제 성공"));
+    }
+
+    // ✅ 인기 매물 (조회수 순)
+    @GetMapping("/popular")
+    public ResponseEntity<List<Property>> popular(@RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(propertyService.getPopularProperties(limit));
     }
 
     // ✅ 지도 기반 검색 API

@@ -13,13 +13,18 @@ import com.piko.home4u.model.Apartment;
 import com.piko.home4u.model.Property;
 import com.piko.home4u.model.Realtor;
 import com.piko.home4u.model.Review;
+import com.piko.home4u.model.PropertyType;
+import com.piko.home4u.model.Transaction;
+import com.piko.home4u.model.TransactionStatus;
 import com.piko.home4u.model.TransactionType;
 import com.piko.home4u.model.UserRole;
+import com.piko.home4u.controller.TransactionController;
 import com.piko.home4u.service.ApartmentService;
 import com.piko.home4u.service.OAuthService;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.RealtorService;
 import com.piko.home4u.service.ReviewService;
+import com.piko.home4u.service.TransactionService;
 import com.piko.home4u.service.UserService;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,6 +72,7 @@ class Home4UTests {
     @Mock private ReviewService reviewService;
     @Mock private RealtorService realtorService;
     @Mock private OAuthService oAuthService;
+    @Mock private TransactionService transactionService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -74,6 +81,7 @@ class Home4UTests {
     @InjectMocks private ReviewController reviewController;
     @InjectMocks private RealtorController realtorController;
     @InjectMocks private OAuthController oAuthController;
+    @InjectMocks private TransactionController transactionController;
 
     @BeforeEach
     void setUp() {
@@ -84,7 +92,8 @@ class Home4UTests {
                         userController,
                         reviewController,
                         oAuthController,
-                        realtorController
+                        realtorController,
+                        transactionController
                 )
                 .setMessageConverters(new MappingJackson2HttpMessageConverter())
                 .build();
@@ -200,6 +209,97 @@ class Home4UTests {
                 .andExpect(jsonPath("$.provider").value("google"))
                 .andExpect(jsonPath("$.configured").value(false))
                 .andExpect(jsonPath("$.url").value(""));
+    }
+
+    // ---- 신규 API 5종 ----
+
+    @Test
+    void popularProperties_returnsList() throws Exception {
+        Property p = new Property();
+        p.setId(1L);
+        p.setTitle("Hot");
+        p.setViews(100);
+        when(propertyService.getPopularProperties(6)).thenReturn(List.of(p));
+
+        mockMvc.perform(get("/properties/popular").param("limit", "6"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Hot"))
+                .andExpect(jsonPath("$[0].views").value(100));
+    }
+
+    @Test
+    void updateProperty_returnsSuccessMessage() throws Exception {
+        Property updated = new Property();
+        updated.setId(5L);
+        when(propertyService.updateProperty(org.mockito.ArgumentMatchers.eq(5L),
+                org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(updated);
+
+        String body = """
+                {
+                  "title":"t","description":"d","price":1,
+                  "propertyType":"APARTMENT","transactionType":"SALE","address":"a",
+                  "latitude":0,"longitude":0,"dong":"d","gungu":"g",
+                  "floor":1,"minArea":0,"maxArea":0
+                }
+                """;
+        mockMvc.perform(put("/properties/{id}", 5L)
+                        .param("editorId", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.propertyId").value(5))
+                .andExpect(jsonPath("$.message").value("매물 수정 성공"));
+    }
+
+    @Test
+    void propertiesByOwner_returnsList() throws Exception {
+        Property p = new Property();
+        p.setId(1L);
+        p.setTitle("Mine");
+        when(propertyService.getPropertiesByOwner(10L)).thenReturn(List.of(p));
+
+        mockMvc.perform(get("/users/{userId}/properties", 10L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Mine"));
+    }
+
+    @Test
+    void changePassword_missingAuthHeader_returns401() throws Exception {
+        mockMvc.perform(put("/users/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"x\",\"newPassword\":\"abcd\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+    }
+
+    @Test
+    void changePassword_happyPath() throws Exception {
+        when(userService.getUsernameFromToken("TOKEN")).thenReturn("alice");
+
+        mockMvc.perform(put("/users/password")
+                        .header("Authorization", "Bearer TOKEN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"old\",\"newPassword\":\"newpw\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("비밀번호 변경 성공"));
+    }
+
+    @Test
+    void transactionsMeSummary_aggregatesByStatus() throws Exception {
+        Transaction pending = Transaction.builder().id(1L).status(TransactionStatus.PENDING).build();
+        Transaction approved = Transaction.builder().id(2L).status(TransactionStatus.APPROVED).build();
+        when(transactionService.getTransactionsByBuyer(1L)).thenReturn(List.of(pending));
+        when(transactionService.getTransactionsBySeller(1L)).thenReturn(List.of(pending, approved));
+
+        mockMvc.perform(get("/transactions/me/summary").param("userId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.buyer.PENDING").value(1))
+                .andExpect(jsonPath("$.buyer.TOTAL").value(1))
+                .andExpect(jsonPath("$.seller.PENDING").value(1))
+                .andExpect(jsonPath("$.seller.APPROVED").value(1))
+                .andExpect(jsonPath("$.seller.TOTAL").value(2));
     }
 
     @Test

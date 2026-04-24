@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/transactions")
@@ -48,5 +50,29 @@ public class TransactionController {
     @GetMapping("/property/{propertyId}")
     public ResponseEntity<List<Transaction>> byProperty(@PathVariable Long propertyId) {
         return ResponseEntity.ok(transactionService.getTransactionsByProperty(propertyId));
+    }
+
+    // 6. 내 거래 요약 - 상태별 카운트 (구매자/판매자 탭 모두)
+    @GetMapping("/me/summary")
+    public ResponseEntity<Map<String, Map<String, Long>>> mySummary(@RequestParam Long userId) {
+        return ResponseEntity.ok(Map.of(
+                "buyer", countByStatus(transactionService.getTransactionsByBuyer(userId)),
+                "seller", countByStatus(transactionService.getTransactionsBySeller(userId))
+        ));
+    }
+
+    private Map<String, Long> countByStatus(List<Transaction> txs) {
+        EnumMap<TransactionStatus, Long> map = new EnumMap<>(TransactionStatus.class);
+        for (TransactionStatus s : TransactionStatus.values()) map.put(s, 0L);
+        for (Transaction tx : txs) {
+            TransactionStatus s = tx.getStatus();
+            if (s != null) map.merge(s, 1L, Long::sum);
+        }
+        Map<String, Long> out = new java.util.LinkedHashMap<>();
+        for (Map.Entry<TransactionStatus, Long> e : map.entrySet()) {
+            out.put(e.getKey().name(), e.getValue());
+        }
+        out.put("TOTAL", (long) txs.size());
+        return out;
     }
 }

@@ -32,6 +32,9 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "AND p.longitude BETWEEN :minLng AND :maxLng")
     List<Property> findByBuildingTypeAndLocation(String buildingType, String dong, String gungu, Double minLat, Double maxLat, Double minLng, Double maxLng);
 
+    // ✅ 특정 소유자의 매물 목록 (최신순)
+    List<Property> findByOwnerIdOrderByIdDesc(Long ownerId);
+
     // ✅ 상세 필터링 검색
     @Query("SELECT p FROM Property p WHERE " +
             "(:transactionType IS NULL OR p.transactionType = :transactionType) " +

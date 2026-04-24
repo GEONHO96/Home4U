@@ -2,7 +2,9 @@ package com.piko.home4u.controller;
 
 import com.piko.home4u.dto.LoginDto;
 import com.piko.home4u.dto.UserSignupDto;
+import com.piko.home4u.model.Property;
 import com.piko.home4u.model.User;
+import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final PropertyService propertyService;
 
     // ✅ 회원가입 API (일반 사용자 & 공인중개사)
     @PostMapping("/register")
@@ -83,5 +86,31 @@ public class UserController {
     @GetMapping("/license/{licenseNumber}")
     public ResponseEntity<?> getUserByLicenseNumber(@PathVariable String licenseNumber) {
         return getUserResponse(userService.getUserLicenseNumber(licenseNumber));
+    }
+
+    // ✅ 특정 사용자가 등록한 매물 목록 (본인/다른 사람 모두 공개)
+    @GetMapping("/{userId}/properties")
+    public ResponseEntity<List<Property>> getPropertiesByOwner(@PathVariable Long userId) {
+        return ResponseEntity.ok(propertyService.getPropertiesByOwner(userId));
+    }
+
+    // ✅ 비밀번호 변경 (본인만)
+    @PutMapping("/password")
+    public ResponseEntity<Map<String, Object>> changePassword(
+            HttpServletRequest request,
+            @RequestBody Map<String, String> body) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("message", "인증이 필요합니다."));
+        }
+        String token = authHeader.substring(7);
+        String username = userService.getUsernameFromToken(token);
+        String currentPassword = body.getOrDefault("currentPassword", "");
+        String newPassword = body.getOrDefault("newPassword", "");
+        if (newPassword == null || newPassword.length() < 4) {
+            return ResponseEntity.badRequest().body(Map.of("message", "새 비밀번호는 4자 이상이어야 합니다."));
+        }
+        userService.changePassword(username, currentPassword, newPassword);
+        return ResponseEntity.ok(Map.of("message", "비밀번호 변경 성공"));
     }
 }

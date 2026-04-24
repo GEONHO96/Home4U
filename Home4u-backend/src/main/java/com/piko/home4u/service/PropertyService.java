@@ -62,12 +62,57 @@ public class PropertyService {
         propertyRepository.save(property);
     }
 
+    // ✅ 매물 수정 (REALTOR · 매물 소유자만 허용)
+    public Property updateProperty(Long id, Long editorId, PropertyDto dto) {
+        Property property = propertyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("매물을 찾을 수 없습니다."));
+        if (property.getOwner() == null || !property.getOwner().getId().equals(editorId)) {
+            throw new RuntimeException("본인이 등록한 매물만 수정할 수 있습니다.");
+        }
+
+        property.setTitle(dto.getTitle());
+        property.setDescription(dto.getDescription());
+        property.setPrice(dto.getPrice());
+        property.setAddress(dto.getAddress());
+        property.setLatitude(dto.getLatitude());
+        property.setLongitude(dto.getLongitude());
+        property.setDong(dto.getDong());
+        property.setGungu(dto.getGungu());
+        property.setFloor(dto.getFloor());
+        property.setMinArea(dto.getMinArea());
+        property.setMaxArea(dto.getMaxArea());
+        property.setPropertyType(dto.getPropertyType());
+        property.setTransactionType(dto.getTransactionType());
+        property.setRoomStructure(dto.getRoomStructure());
+        property.setAdditionalOptions(dto.getAdditionalOptions());
+        if (dto.getImageUrl() != null) {
+            property.setImageUrl(dto.getImageUrl());
+        }
+        return propertyRepository.save(property);
+    }
+
     // ✅ 매물 삭제
     public void deleteProperty(Long id) {
         if (!propertyRepository.existsById(id)) {
             throw new RuntimeException("삭제할 매물이 존재하지 않습니다.");
         }
         propertyRepository.deleteById(id);
+    }
+
+    // ✅ 인기 매물 (조회수 내림차순, 상위 limit 개)
+    public List<Property> getPopularProperties(int limit) {
+        return propertyRepository.findAll(
+                org.springframework.data.domain.PageRequest.of(
+                        0,
+                        Math.max(1, Math.min(limit, 50)),
+                        org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.DESC, "views")))
+                .getContent();
+    }
+
+    // ✅ 특정 소유자의 매물 목록
+    public List<Property> getPropertiesByOwner(Long ownerId) {
+        return propertyRepository.findByOwnerIdOrderByIdDesc(ownerId);
     }
 
     // ✅ 매물 거래 요청 (구매자가 매물 거래 요청)

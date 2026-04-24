@@ -67,6 +67,17 @@ public class UserService {
         userRepository.delete(user);
     }
 
+    // ✅ 비밀번호 변경 (현재 비밀번호 확인 후 교체)
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("현재 비밀번호가 일치하지 않습니다.");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     // ✅ 사용자명(username)으로 회원 검색
     public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username);

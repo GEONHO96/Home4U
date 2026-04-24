@@ -831,7 +831,7 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | Job | 내용 | 부가 산출물 |
 |:----|:-----|:----|
-| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
+| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 14 · 서비스 단위 30 = **44 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
 | `frontend-build` | Node 20 · `npm ci` · `npm run build` (tsc + vite) | `Home4u-frontend/dist` (artifact: `frontend-dist`) |
 
 상단의 CI 뱃지가 **최신 main 빌드 상태**를 실시간으로 반영합니다. 실패 시 Actions 탭에서 원인 로그를 바로 확인할 수 있습니다.
@@ -848,9 +848,9 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | 카테고리 | 수 | 주요 경로 |
 |:---------|:---|:---------|
-| 사용자 | 8 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록 |
-| 매물 | 8 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절 |
-| 거래 | 5 | 구매자/판매자/상태/기간/매물 기준 조회 |
+| 사용자 | 10 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록, **내 매물**, **비밀번호 변경** |
+| 매물 | 10 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절, **수정(PUT)**, **인기(popular)** |
+| 거래 | 6 | 구매자/판매자/상태/기간/매물 + **내 거래 요약(summary)** |
 | 리뷰 | 5 | 작성, 조회, 평균 평점, 개수, 삭제 |
 | 찜(Favorite) | 5 | 추가, 삭제, 체크, 내 목록, 매물별 카운트 |
 | 아파트 | 8 | 이름/구/동/용적률·건폐율/중개사·학교 |
@@ -894,6 +894,8 @@ docker run --rm -p 8081:80 home4u-frontend
 | GET | `/users/phone/{phone}` | 전화번호로 조회 |
 | GET | `/users/realtors` | 공인중개사 목록 |
 | GET | `/users/license/{licenseNumber}` | 라이선스로 검색 |
+| GET | `/users/{userId}/properties` | 특정 사용자가 등록한 매물 목록 |
+| PUT | `/users/password` | 비밀번호 변경 (Bearer 토큰 필수, `{currentPassword, newPassword}`) |
 
 </details>
 
@@ -929,6 +931,8 @@ docker run --rm -p 8081:80 home4u-frontend
 | 메서드 | 경로 | 설명 |
 |:-------|:-----|:-----|
 | GET | `/properties` | 전체 목록 |
+| GET | `/properties/popular?limit=6` | 조회수 내림차순 인기 매물 (기본 6, 최대 50) |
+| PUT | `/properties/{id}?editorId=…` | 매물 수정 (등록자 본인만 허용) |
 | DELETE | `/properties/{id}` | 매물 삭제 |
 | POST | `/properties/{id}/transactions?buyerId={}` | 거래 요청 (seller 는 매물 소유자로 자동 설정) |
 | POST | `/properties/transactions/{txId}/approve` | 거래 승인 + `isSold=true` |
@@ -946,6 +950,7 @@ docker run --rm -p 8081:80 home4u-frontend
 | GET | `/transactions/status?status=PENDING` | 상태 기준 조회 |
 | GET | `/transactions/between?start=...&end=...` | 날짜 범위 조회 |
 | GET | `/transactions/property/{propertyId}` | 특정 매물의 거래 내역 |
+| GET | `/transactions/me/summary?userId={}` | 내 거래 요약 — buyer/seller 시점별 상태 카운트 + TOTAL |
 
 </details>
 
