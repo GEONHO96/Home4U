@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>오프라인 · Home4U</title>
+    <style>
+      :root { color-scheme: light; }
+      html, body { margin: 0; padding: 0; height: 100%; background: #f7f8fa; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #111418; }
+      .wrap { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+      .card { max-width: 420px; width: 100%; background: #fff; border: 1px solid #ebedf0; border-radius: 16px; padding: 2rem; text-align: center; box-shadow: 0 12px 32px rgba(17,20,24,0.08); }
+      .logo { width: 64px; height: 64px; border-radius: 14px; background: #1673ff; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; }
+      h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+      p { color: #586069; margin: 0 0 1.25rem; }
+      button { background: #1673ff; color: #fff; border: none; border-radius: 10px; padding: 0.65rem 1.25rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+      button:hover { background: #0e5fe3; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="logo">H4</div>
+        <h1>오프라인입니다</h1>
+        <p>네트워크에 연결되면 이 페이지는 자동으로 닫히고, 방금 보던 화면으로 돌아갑니다.</p>
+        <button onclick="location.reload()">다시 시도</button>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('online', () => location.reload());
+    </script>
+  </body>
+</html>

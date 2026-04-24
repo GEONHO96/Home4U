@@ -11,7 +11,15 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { formatPriceHuman, getProperty, requestTransaction, type Property } from '../api';
+import {
+  formatPriceHuman,
+  getProperty,
+  getSessionUserId,
+  requestTransaction,
+  type Property,
+} from '../api';
+import FavoriteToggle from '../components/FavoriteToggle';
+import ReviewSection from '../components/ReviewSection';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PropertyDetail'>;
 
@@ -32,10 +40,14 @@ export default function PropertyDetailScreen({ route }: Props) {
 
   const onRequestTransaction = async () => {
     if (!item) return;
+    const uid = getSessionUserId();
+    if (!uid) {
+      Alert.alert('로그인이 필요해요', '거래를 요청하려면 먼저 로그인해주세요.');
+      return;
+    }
     setBusy(true);
     try {
-      // 실제로는 로그인 사용자 ID 를 사용해야 한다. 데모에서는 prompt 대신 1 고정.
-      const tx = await requestTransaction(item.id, 2);
+      const tx = await requestTransaction(item.id, uid);
       Alert.alert('거래 요청 완료', `거래 번호 #${tx.id} · 상태 ${tx.status}`);
     } catch (err: unknown) {
       const anyErr = err as { message?: string };
@@ -71,10 +83,12 @@ export default function PropertyDetailScreen({ route }: Props) {
       )}
 
       <View style={styles.section}>
-        <View style={styles.badgeRow}>
+        <View style={[styles.badgeRow, { alignItems: 'center' }]}>
           <Badge text={item.propertyType} />
           <Badge text={item.transactionType} accent />
           {item.isSold && <Badge text="거래완료" sold />}
+          <View style={{ flex: 1 }} />
+          <FavoriteToggle propertyId={item.id} label />
         </View>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.price}>{formatPriceHuman(item.price)}</Text>
@@ -101,6 +115,8 @@ export default function PropertyDetailScreen({ route }: Props) {
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>거래 요청하기</Text>}
         </TouchableOpacity>
       )}
+
+      <ReviewSection propertyId={item.id} />
     </ScrollView>
   );
 }

@@ -10,6 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: [
         'icons/apple-touch-icon.png',
+        'offline.html',
         'screenshot-bootstrap.html',
         'vite.svg',
       ],
@@ -45,8 +46,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // 백엔드 API 는 캐시하지 않고 네트워크 우선으로
-        navigateFallback: '/index.html',
+        // 네트워크 실패 시 오프라인 안내 페이지로 폴백
+        navigateFallback: '/offline.html',
         navigateFallbackDenylist: [/^\/oauth\//, /\/api\//],
         runtimeCaching: [
           {

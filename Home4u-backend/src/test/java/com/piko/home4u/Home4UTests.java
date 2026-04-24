@@ -2,6 +2,7 @@ package com.piko.home4u;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.ApartmentController;
+import com.piko.home4u.controller.OAuthController;
 import com.piko.home4u.controller.PropertyController;
 import com.piko.home4u.controller.RealtorController;
 import com.piko.home4u.controller.ReviewController;
@@ -15,10 +16,12 @@ import com.piko.home4u.model.Review;
 import com.piko.home4u.model.TransactionType;
 import com.piko.home4u.model.UserRole;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.OAuthService;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.RealtorService;
 import com.piko.home4u.service.ReviewService;
 import com.piko.home4u.service.UserService;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +65,7 @@ class Home4UTests {
     @Mock private UserService userService;
     @Mock private ReviewService reviewService;
     @Mock private RealtorService realtorService;
+    @Mock private OAuthService oAuthService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -69,6 +73,7 @@ class Home4UTests {
     @InjectMocks private UserController userController;
     @InjectMocks private ReviewController reviewController;
     @InjectMocks private RealtorController realtorController;
+    @InjectMocks private OAuthController oAuthController;
 
     @BeforeEach
     void setUp() {
@@ -78,6 +83,7 @@ class Home4UTests {
                         propertyController,
                         userController,
                         reviewController,
+                        oAuthController,
                         realtorController
                 )
                 .setMessageConverters(new MappingJackson2HttpMessageConverter())
@@ -182,5 +188,34 @@ class Home4UTests {
         mockMvc.perform(get("/realtors/apartment/{id}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Top Realtor"));
+    }
+
+    // ---- OAuth authorize-url ----
+
+    @Test
+    void oauthAuthorizeUrl_whenNotConfigured_returnsConfiguredFalse() throws Exception {
+        // @Value 필드는 기본값이 빈 문자열이므로 설정을 주입하지 않음
+        mockMvc.perform(get("/oauth/{provider}/authorize-url", "google"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("google"))
+                .andExpect(jsonPath("$.configured").value(false))
+                .andExpect(jsonPath("$.url").value(""));
+    }
+
+    @Test
+    void oauthAuthorizeUrl_whenConfigured_returnsProviderUrl() throws Exception {
+        ReflectionTestUtils.setField(oAuthController, "naverClientId", "test-client-id");
+        ReflectionTestUtils.setField(oAuthController, "naverRedirectUri", "http://localhost:5173/oauth/naver/callback");
+
+        mockMvc.perform(get("/oauth/{provider}/authorize-url", "naver"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("naver"))
+                .andExpect(jsonPath("$.configured").value(true))
+                .andExpect(jsonPath("$.url").value(org.hamcrest.Matchers.startsWith(
+                        "https://nid.naver.com/oauth2.0/authorize")))
+                .andExpect(jsonPath("$.url").value(org.hamcrest.Matchers.containsString(
+                        "client_id=test-client-id")))
+                .andExpect(jsonPath("$.url").value(org.hamcrest.Matchers.containsString(
+                        "redirect_uri=")));
     }
 }

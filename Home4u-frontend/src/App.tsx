@@ -9,23 +9,27 @@ import PropertyCreatePage from './pages/PropertyCreatePage';
 import TransactionsPage from './pages/TransactionsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
+import InstallPrompt from './components/InstallPrompt';
 import './App.css';
 
 function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/properties" element={<PropertyListPage />} />
-        <Route path="/properties/new" element={<PropertyCreatePage />} />
-        <Route path="/properties/:id" element={<PropertyDetailPage />} />
-        <Route path="/transactions/me" element={<TransactionsPage />} />
-        <Route path="/favorites" element={<FavoritesPage />} />
-        <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/properties" element={<PropertyListPage />} />
+          <Route path="/properties/new" element={<PropertyCreatePage />} />
+          <Route path="/properties/:id" element={<PropertyDetailPage />} />
+          <Route path="/transactions/me" element={<TransactionsPage />} />
+          <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
+        </Route>
+      </Routes>
+      <InstallPrompt />
+    </>
   );
 }
 

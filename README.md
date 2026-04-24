@@ -75,6 +75,8 @@
 | ![detail](docs/screenshots/05-property-detail.png) | ![new](docs/screenshots/06-property-new.png) |
 | **내 거래 내역 (판매자 탭)** · 승인/거절 | **찜한 매물** · 카드 그리드 |
 | ![me](docs/screenshots/07-transactions-me.png) | ![fav](docs/screenshots/08-favorites.png) |
+| **오프라인 페이지** · PWA 네트워크 실패 시 폴백 |  |
+| ![offline](docs/screenshots/09-offline.png) |  |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -621,6 +623,8 @@ export MYSQL_PASSWORD=<your-password>
 | `manifest.webmanifest` | name/short_name, theme_color `#1673ff`, display=standalone, 아이콘 192/512 + maskable |
 | Service Worker (Workbox) | vite-plugin-pwa 가 `generateSW` 모드로 자동 생성 · `registerType: autoUpdate` |
 | 런타임 캐시 | Pretendard CDN `CacheFirst` (30일), Unsplash 이미지 `StaleWhileRevalidate`, OSM 타일 `StaleWhileRevalidate` (7일) |
+| 오프라인 폴백 | 네트워크 실패 시 `offline.html` 을 표시 (로고 + "다시 시도" + `online` 이벤트 자동 리로드) |
+| 설치 유도 배너 | `InstallPrompt` 컴포넌트가 `beforeinstallprompt` 이벤트를 캡처해 하단 시트로 노출, "나중에" 는 localStorage 로 재표시 차단 |
 | 아이콘 | `Home4u-frontend/public/icons/` (Edge headless 로 SVG → PNG 자동 생성) |
 
 ### 설치 확인

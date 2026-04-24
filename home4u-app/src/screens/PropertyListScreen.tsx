@@ -12,6 +12,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { formatPriceHuman, listProperties, type Property } from '../api';
+import FavoriteToggle from '../components/FavoriteToggle';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PropertyList'>;
 
@@ -88,10 +89,12 @@ export default function PropertyListScreen({ navigation }: Props) {
             </View>
           )}
           <View style={{ padding: 12 }}>
-            <View style={styles.badgeRow}>
+            <View style={[styles.badgeRow, { alignItems: 'center' }]}>
               <Badge text={item.propertyType} />
               <Badge text={item.transactionType} accent />
               {item.isSold && <Badge text="거래완료" sold />}
+              <View style={{ flex: 1 }} />
+              <FavoriteToggle propertyId={item.id} />
             </View>
             <Text style={styles.price}>{formatPriceHuman(item.price)}</Text>
             <Text style={styles.title}>{item.title}</Text>

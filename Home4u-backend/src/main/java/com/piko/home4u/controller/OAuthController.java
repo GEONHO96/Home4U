@@ -21,17 +21,20 @@ import java.util.UUID;
 public class OAuthController {
     private final OAuthService oAuthService;
 
+    // 필드 기본값은 빈 문자열. @Value 가 property 로 덮어쓴다.
+    // (MockMvc standalone 컨텍스트는 @Value 를 적용하지 않으므로 기본값이 NPE 를 막아준다.)
+
     // --- Google ---
-    @Value("${oauth.google.client-id:}")   private String googleClientId;
-    @Value("${oauth.google.redirect-uri:}") private String googleRedirectUri;
+    @Value("${oauth.google.client-id:}")   private String googleClientId = "";
+    @Value("${oauth.google.redirect-uri:}") private String googleRedirectUri = "";
 
     // --- Kakao ---
-    @Value("${oauth.kakao.client-id:}")    private String kakaoClientId;
-    @Value("${oauth.kakao.redirect-uri:}") private String kakaoRedirectUri;
+    @Value("${oauth.kakao.client-id:}")    private String kakaoClientId = "";
+    @Value("${oauth.kakao.redirect-uri:}") private String kakaoRedirectUri = "";
 
     // --- Naver ---
-    @Value("${oauth.naver.client-id:}")    private String naverClientId;
-    @Value("${oauth.naver.redirect-uri:}") private String naverRedirectUri;
+    @Value("${oauth.naver.client-id:}")    private String naverClientId = "";
+    @Value("${oauth.naver.redirect-uri:}") private String naverRedirectUri = "";
 
     /**
      * 프론트가 "소셜 로그인" 버튼을 눌렀을 때 받아갈 provider authorization URL.

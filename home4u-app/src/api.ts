@@ -53,6 +53,29 @@ export interface Property {
   views?: number;
 }
 
+export interface Review {
+  id: number;
+  user?: { id: number; username: string };
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface Favorite {
+  id: number;
+  property: Property;
+  createdAt: string;
+}
+
+let cachedUserId: number | null = null;
+let cachedUsername: string | null = null;
+export function getSessionUserId(): number | null {
+  return cachedUserId;
+}
+export function getSessionUsername(): string | null {
+  return cachedUsername;
+}
+
 // ------- Endpoints -------
 
 export async function login(username: string, password: string) {
@@ -61,7 +84,52 @@ export async function login(username: string, password: string) {
     { username, password },
   );
   setToken(res.data.token);
+  cachedUserId = res.data.userId;
+  cachedUsername = res.data.username;
   return res.data;
+}
+
+export function logout() {
+  setToken(null);
+  cachedUserId = null;
+  cachedUsername = null;
+}
+
+// ---- Favorites ----
+
+export async function checkFavorite(userId: number, propertyId: number): Promise<boolean> {
+  const res = await api.get<{ favorited: boolean }>('/favorites/check', { params: { userId, propertyId } });
+  return res.data.favorited;
+}
+export async function addFavorite(userId: number, propertyId: number) {
+  await api.post('/favorites', null, { params: { userId, propertyId } });
+}
+export async function removeFavorite(userId: number, propertyId: number) {
+  await api.delete('/favorites', { params: { userId, propertyId } });
+}
+export async function listMyFavorites(userId: number): Promise<Favorite[]> {
+  const res = await api.get<Favorite[]>('/favorites', { params: { userId } });
+  return res.data;
+}
+
+// ---- Reviews ----
+
+export async function getReviews(propertyId: number): Promise<Review[]> {
+  const res = await api.get<Review[]>(`/reviews/${propertyId}`);
+  return res.data;
+}
+export async function getAverageRating(propertyId: number): Promise<number> {
+  const res = await api.get<{ averageRating: number }>(`/reviews/${propertyId}/rating`);
+  return Number.isFinite(res.data.averageRating) ? res.data.averageRating : 0;
+}
+export async function createReview(args: {
+  propertyId: number; userId: number; rating: number; comment: string;
+}): Promise<{ reviewId: number }> {
+  const res = await api.post<{ reviewId: number }>('/reviews', null, { params: args });
+  return res.data;
+}
+export async function deleteReview(reviewId: number, userId: number) {
+  await api.delete(`/reviews/${reviewId}`, { params: { userId } });
 }
 
 export async function listProperties(): Promise<Property[]> {
