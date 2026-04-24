@@ -79,6 +79,8 @@
 | ![offline](docs/screenshots/09-offline.png) | ![nearby](docs/screenshots/10-property-detail-nearby.png) |
 | **채팅 목록** · 상대 아바타 + 매물 태그 + 최근 시각 | **채팅방** · 버블 UI + 읽음 처리 + 5s 폴링 |
 | ![chat-list](docs/screenshots/11-chat-list.png) | ![chat-room](docs/screenshots/12-chat-room.png) |
+| **매물 상세 · 등록자 신뢰도 카드** · 평점 · 누적 찜 · 거래 완료율 · 응답 속도 중위값 | |
+| ![realtor-stats](docs/screenshots/13-realtor-stats.png) | |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -102,6 +104,7 @@
 | 지도 + 리스트 이중 뷰 | 좌측 매물 카드 리스트 + 우측 OSM 지도. **가격 마커 클러스터링** · **드래그 후 "이 지역에서 검색"** 버튼 |
 | 매물 목록·상세 | 이미지 갤러리(다중) + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 + 주변 지하철/학교 + 실거래가 월별 추이 차트 + **채팅 문의 버튼** |
 | **1:1 채팅** | 상세에서 "💬 채팅 문의" → 방 생성/재사용 후 `/chats/{id}` 이동. 내/상대 버블 UI, 읽음 처리, 5초 폴링으로 신규 메시지 갱신, `/chats` 에 전체 목록 |
+| **등록자 신뢰도 카드** | 매물 상세에 "등록자 정보" 미니 카드. 누적 리뷰·평점 가중평균, 누적 찜 수, 거래 승인/완료율, 채팅 응답 속도 중위값 (분) 을 4-grid 로 집계 |
 | 지역·필터 검색 | 지역 프리셋(서울/강남/마포) + 거래유형/방구조/면적/층수 필터 칩 + 키워드 검색 |
 | **저장된 검색** | 필터 바의 "★ 조건 저장" 으로 등록, `/saved-searches` 에서 매칭되는 신규 매물 즉시 확인 |
 | 거래 요청 | 상세 페이지에서 단일 버튼으로 PENDING 거래 생성, seller 는 매물 소유자로 자동 설정 |
@@ -852,7 +855,7 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | 카테고리 | 수 | 주요 경로 |
 |:---------|:---|:---------|
-| 사용자 | 10 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록, 내 매물, 비밀번호 변경 |
+| 사용자 | 11 | 회원가입, 로그인, 탈퇴, 검색, 중개업자 목록, 내 매물, 비밀번호 변경, **중개사 신뢰도 지표(`/users/{id}/realtor-stats`)** |
 | 매물 | 12 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절, 수정(PUT), 인기(popular), **페이지네이션(`/page`)**, **인기 찜(`/most-favorited`)** |
 | 거래 | 6 | 구매자/판매자/상태/기간/매물 + 내 거래 요약(summary) |
 | 리뷰 | 6 | 작성, 조회, 평균 평점, 개수, **수정(PUT)**, 삭제 |
@@ -903,6 +906,7 @@ docker run --rm -p 8081:80 home4u-frontend
 | GET | `/users/realtors` | 공인중개사 목록 |
 | GET | `/users/license/{licenseNumber}` | 라이선스로 검색 |
 | GET | `/users/{userId}/properties` | 특정 사용자가 등록한 매물 목록 |
+| GET | `/users/{userId}/realtor-stats` | 중개사 신뢰도 지표 (평점·누적 찜·거래 완료율·응답 속도 중위값) |
 | PUT | `/users/password` | 비밀번호 변경 (Bearer 토큰 필수, `{currentPassword, newPassword}`) |
 
 </details>

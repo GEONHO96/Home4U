@@ -6,6 +6,7 @@ import com.piko.home4u.model.Property;
 import com.piko.home4u.model.User;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.UserService;
+import com.piko.home4u.service.UserStatsService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.util.Optional;
 public class UserController {
     private final UserService userService;
     private final PropertyService propertyService;
+    private final UserStatsService userStatsService;
 
     // ✅ 회원가입 API (일반 사용자 & 공인중개사)
     @PostMapping("/register")
@@ -92,6 +94,12 @@ public class UserController {
     @GetMapping("/{userId}/properties")
     public ResponseEntity<List<Property>> getPropertiesByOwner(@PathVariable Long userId) {
         return ResponseEntity.ok(propertyService.getPropertiesByOwner(userId));
+    }
+
+    // ✅ 중개사/매물 소유자 신뢰도 지표 (평점/리뷰/찜/거래완료율/응답속도)
+    @GetMapping("/{userId}/realtor-stats")
+    public ResponseEntity<UserStatsService.RealtorStats> getRealtorStats(@PathVariable Long userId) {
+        return ResponseEntity.ok(userStatsService.computeRealtorStats(userId));
     }
 
     // ✅ 비밀번호 변경 (본인만)

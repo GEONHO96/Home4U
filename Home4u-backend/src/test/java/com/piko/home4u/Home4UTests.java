@@ -36,6 +36,7 @@ import com.piko.home4u.service.ReviewService;
 import com.piko.home4u.service.SavedSearchService;
 import com.piko.home4u.service.TransactionService;
 import com.piko.home4u.service.UserService;
+import com.piko.home4u.service.UserStatsService;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,6 +87,7 @@ class Home4UTests {
     @Mock private FavoriteService favoriteService;
     @Mock private SavedSearchService savedSearchService;
     @Mock private ChatService chatService;
+    @Mock private UserStatsService userStatsService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -268,6 +270,33 @@ class Home4UTests {
         mockMvc.perform(get("/chats/{id}/unread-count", 1L).param("userId", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(4));
+    }
+
+    // ---- 5차 신규 API (RealtorStats) ----
+
+    @Test
+    void realtorStats_returnsAggregatedMetrics() throws Exception {
+        UserStatsService.RealtorStats stats = UserStatsService.RealtorStats.builder()
+                .userId(10L)
+                .username("alice")
+                .role("ROLE_REALTOR")
+                .propertyCount(3)
+                .totalReviews(5)
+                .averageRating(4.6)
+                .totalFavorites(12)
+                .totalTransactions(4)
+                .completionRate(0.5)
+                .medianResponseMinutes(30)
+                .build();
+        when(userStatsService.computeRealtorStats(10L)).thenReturn(stats);
+
+        mockMvc.perform(get("/users/{userId}/realtor-stats", 10L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(10))
+                .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.averageRating").value(4.6))
+                .andExpect(jsonPath("$.completionRate").value(0.5))
+                .andExpect(jsonPath("$.medianResponseMinutes").value(30));
     }
 
     // ---- 3차 신규 API (SavedSearch) ----

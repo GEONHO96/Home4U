@@ -8,6 +8,7 @@ import FavoriteButton from '../components/FavoriteButton';
 import ImageGallery from '../components/ImageGallery';
 import NearbyPanel from '../components/NearbyPanel';
 import DealChart from '../components/DealChart';
+import RealtorCard from '../components/RealtorCard';
 import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
@@ -61,7 +62,8 @@ function PropertyDetailPage() {
   );
   if (!item) return <p className="container muted" style={{ padding: '2rem 1.25rem' }}>불러오는 중…</p>;
 
-  const isOwner = myUserId != null && myUserId === (item as Property & { ownerId?: number }).ownerId;
+  const ownerId = (item as Property & { ownerId?: number }).ownerId;
+  const isOwner = myUserId != null && myUserId === ownerId;
   const views = (item as Property & { views?: number }).views ?? 0;
 
   const handleStartChat = async () => {
@@ -134,6 +136,8 @@ function PropertyDetailPage() {
           </dl>
         </div>
       </div>
+
+      {ownerId != null && <RealtorCard userId={ownerId} />}
 
       <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {myUserId == null && (
