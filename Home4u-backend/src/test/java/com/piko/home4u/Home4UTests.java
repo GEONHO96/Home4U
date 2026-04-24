@@ -19,11 +19,15 @@ import com.piko.home4u.model.Transaction;
 import com.piko.home4u.model.TransactionStatus;
 import com.piko.home4u.model.TransactionType;
 import com.piko.home4u.model.UserRole;
+import com.piko.home4u.controller.ChatController;
 import com.piko.home4u.controller.SavedSearchController;
 import com.piko.home4u.controller.TransactionController;
 import com.piko.home4u.dto.SavedSearchDto;
+import com.piko.home4u.model.ChatMessage;
+import com.piko.home4u.model.ChatRoom;
 import com.piko.home4u.model.SavedSearch;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.ChatService;
 import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.OAuthService;
 import com.piko.home4u.service.PropertyService;
@@ -81,6 +85,7 @@ class Home4UTests {
     @Mock private TransactionService transactionService;
     @Mock private FavoriteService favoriteService;
     @Mock private SavedSearchService savedSearchService;
+    @Mock private ChatService chatService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -92,6 +97,7 @@ class Home4UTests {
     @InjectMocks private TransactionController transactionController;
     @InjectMocks private FavoriteController favoriteController;
     @InjectMocks private SavedSearchController savedSearchController;
+    @InjectMocks private ChatController chatController;
 
     @BeforeEach
     void setUp() {
@@ -105,7 +111,8 @@ class Home4UTests {
                         realtorController,
                         transactionController,
                         favoriteController,
-                        savedSearchController
+                        savedSearchController,
+                        chatController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -223,6 +230,44 @@ class Home4UTests {
                 .andExpect(jsonPath("$.provider").value("google"))
                 .andExpect(jsonPath("$.configured").value(false))
                 .andExpect(jsonPath("$.url").value(""));
+    }
+
+    // ---- 4차 신규 API (Chat) ----
+
+    @Test
+    void chat_openRoom_returnsRoom() throws Exception {
+        ChatRoom r = ChatRoom.builder().id(7L).build();
+        when(chatService.openRoom(1L, 2L, null)).thenReturn(r);
+
+        mockMvc.perform(post("/chats").param("buyerId", "1").param("sellerId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7));
+    }
+
+    @Test
+    void chat_sendMessage_returnsPersisted() throws Exception {
+        ChatMessage m = ChatMessage.builder().id(99L).content("hello").build();
+        when(chatService.sendMessage(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(2L),
+                org.mockito.ArgumentMatchers.eq("hello")))
+                .thenReturn(m);
+
+        mockMvc.perform(post("/chats/{id}/messages", 1L)
+                        .param("userId", "2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"hello\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(99))
+                .andExpect(jsonPath("$.content").value("hello"));
+    }
+
+    @Test
+    void chat_unreadCount_returnsNumber() throws Exception {
+        when(chatService.countUnread(1L, 2L)).thenReturn(4L);
+
+        mockMvc.perform(get("/chats/{id}/unread-count", 1L).param("userId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(4));
     }
 
     // ---- 3차 신규 API (SavedSearch) ----

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPropertyById } from '../api/propertyApi';
 import { requestTransaction } from '../api/transactionApi';
+import { openChatRoom } from '../api/chatApi';
 import ReviewSection from '../components/ReviewSection';
 import FavoriteButton from '../components/FavoriteButton';
 import ImageGallery from '../components/ImageGallery';
@@ -62,6 +63,21 @@ function PropertyDetailPage() {
 
   const isOwner = myUserId != null && myUserId === (item as Property & { ownerId?: number }).ownerId;
   const views = (item as Property & { views?: number }).views ?? 0;
+
+  const handleStartChat = async () => {
+    if (!myUserId || !item.id) return;
+    setBusy(true);
+    setAction(null);
+    try {
+      const room = await openChatRoom(myUserId, { propertyId: item.id });
+      navigate(`/chats/${room.id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '채팅방 생성 실패';
+      setAction({ type: 'error', text: msg });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleRequestTransaction = async () => {
     if (!myUserId || !item.id) return;
@@ -136,9 +152,14 @@ function PropertyDetailPage() {
           </Link>
         )}
         {myUserId != null && !isOwner && !item.isSold && (
-          <button type="button" className="primary" onClick={handleRequestTransaction} disabled={busy}>
-            {busy ? '요청 중…' : '거래 요청하기'}
-          </button>
+          <>
+            <button type="button" className="primary" onClick={handleRequestTransaction} disabled={busy}>
+              {busy ? '요청 중…' : '거래 요청하기'}
+            </button>
+            <button type="button" onClick={handleStartChat} disabled={busy}>
+              💬 채팅 문의
+            </button>
+          </>
         )}
         {myUserId != null && isOwner && (
           <button type="button" onClick={() => navigate('/transactions/me?tab=seller')}>

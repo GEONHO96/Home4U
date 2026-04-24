@@ -59,6 +59,7 @@ function Layout() {
             <HeaderLink to="/properties">매물</HeaderLink>
             {username && <HeaderLink to="/favorites">찜</HeaderLink>}
             {username && <HeaderLink to="/saved-searches">저장된 검색</HeaderLink>}
+            {username && <HeaderLink to="/chats">채팅</HeaderLink>}
             {username && <HeaderLink to="/transactions/me">내 거래</HeaderLink>}
             {role === 'ROLE_REALTOR' && <HeaderLink to="/properties/new">매물 등록</HeaderLink>}
             <span style={{ flex: '0 0 0.5rem' }} />
