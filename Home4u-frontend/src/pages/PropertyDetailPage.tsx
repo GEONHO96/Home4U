@@ -4,6 +4,7 @@ import { getPropertyById } from '../api/propertyApi';
 import { requestTransaction } from '../api/transactionApi';
 import ReviewSection from '../components/ReviewSection';
 import FavoriteButton from '../components/FavoriteButton';
+import ImageGallery from '../components/ImageGallery';
 import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
@@ -82,9 +83,7 @@ function PropertyDetailPage() {
       </Link>
 
       <div className="card" style={{ marginTop: '0.75rem' }}>
-        <div className="thumb" style={{ aspectRatio: '16/9' }}>
-          {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>이미지 없음</span>}
-        </div>
+        <ImageGallery imageUrls={item.imageUrls} fallbackUrl={item.imageUrl} />
         <div className="card-body">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
             <span className="badge">{labelOf(PROPERTY_TYPES, item.propertyType)}</span>

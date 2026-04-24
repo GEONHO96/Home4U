@@ -12,8 +12,9 @@ import {
   ROOM_STRUCTURES,
   TRANSACTION_TYPES,
 } from '../types/property';
-import MapView from '../components/MapView';
+import MapView, { type MapBounds } from '../components/MapView';
 import FavoriteButton from '../components/FavoriteButton';
+import { createSavedSearch } from '../api/savedSearchApi';
 
 function labelOf<T extends string>(
   options: { value: T; label: string }[],
@@ -46,6 +47,8 @@ function PropertyListPage() {
   const [keyword, setKeyword] = useState('');
   const [activeId, setActiveId] = useState<number | null>(null);
   const [view, setView] = useState<'split' | 'list' | 'map'>('split');
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [boundsChangedSinceSearch, setBoundsChangedSinceSearch] = useState(false);
 
   const role = localStorage.getItem('role');
 
@@ -75,7 +78,52 @@ function PropertyListPage() {
   const handlePreset = async (preset: typeof REGION_PRESETS[number]) => {
     try {
       setItems(await searchPropertiesByCoordinates(preset));
+      setBoundsChangedSinceSearch(false);
     } catch (err) { handleErr(err); }
+  };
+
+  const handleSearchInBounds = async () => {
+    if (!mapBounds) return;
+    try {
+      setItems(await searchPropertiesByCoordinates(mapBounds));
+      setBoundsChangedSinceSearch(false);
+    } catch (err) { handleErr(err); }
+  };
+
+  const handleBoundsChange = (b: MapBounds) => {
+    setMapBounds(b);
+    setBoundsChangedSinceSearch(true);
+  };
+
+  const handleSaveSearch = async () => {
+    const userIdRaw = localStorage.getItem('userId');
+    if (!userIdRaw) {
+      alert('로그인 후 사용할 수 있어요.');
+      return;
+    }
+    const name = window.prompt('저장할 검색의 이름을 입력하세요', '내 검색');
+    if (name == null) return;
+    try {
+      await createSavedSearch({
+        userId: Number(userIdRaw),
+        name: name.trim() || '내 검색',
+        transactionType: filter.transactionType,
+        roomStructure: filter.roomStructure,
+        minArea: filter.minArea,
+        maxArea: filter.maxArea,
+        minFloor: filter.minFloor,
+        maxFloor: filter.maxFloor,
+        keyword: keyword || undefined,
+        minLat: mapBounds?.minLat,
+        maxLat: mapBounds?.maxLat,
+        minLng: mapBounds?.minLng,
+        maxLng: mapBounds?.maxLng,
+      });
+      alert('저장됐어요. "저장된 검색" 메뉴에서 확인할 수 있습니다.');
+    } catch (err) {
+      const anyErr = err as { response?: { data?: { message?: string } }; message?: string };
+      alert('저장 실패: ' + (anyErr.response?.data?.message ?? anyErr.message ?? ''));
+    }
   };
 
   const filtered = useMemo(() => {
@@ -115,6 +163,9 @@ function PropertyListPage() {
           <ChipFilterArea filter={filter} onChange={(next) => setFilter((p) => ({ ...p, ...next }))} />
           <button type="button" className="primary" onClick={handleApplyFilter}>적용</button>
           <button type="button" className="ghost" onClick={() => { setFilter({}); setKeyword(''); loadAll(); }}>초기화</button>
+          <button type="button" className="ghost" onClick={handleSaveSearch} title="현재 조건을 저장된 검색에 추가">
+            ★ 조건 저장
+          </button>
 
           <span style={{ flex: 1 }} />
           <div role="tablist" aria-label="view switcher" style={{ display: 'flex', gap: '0.25rem', border: '1px solid var(--color-border-strong)', borderRadius: 'var(--radius-md)', padding: 2 }}>
@@ -216,7 +267,29 @@ function PropertyListPage() {
               items={filtered.filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude))}
               activeId={activeId}
               onSelect={(id) => navigate(`/properties/${id}`)}
+              onBoundsChange={handleBoundsChange}
             />
+            {boundsChangedSinceSearch && mapBounds && (
+              <button
+                type="button"
+                className="primary"
+                onClick={handleSearchInBounds}
+                style={{
+                  position: 'absolute',
+                  top: '0.75rem',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 1000,
+                  boxShadow: 'var(--shadow-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <span aria-hidden>⟳</span>
+                이 지역에서 검색
+              </button>
+            )}
           </div>
         )}
       </div>

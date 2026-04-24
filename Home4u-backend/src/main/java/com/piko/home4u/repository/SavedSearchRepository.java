@@ -1,0 +1,10 @@
+package com.piko.home4u.repository;
+
+import com.piko.home4u.model.SavedSearch;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface SavedSearchRepository extends JpaRepository<SavedSearch, Long> {
+    List<SavedSearch> findByUserIdOrderByCreatedAtDesc(Long userId);
+}

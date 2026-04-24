@@ -46,6 +46,7 @@ public class PropertyResponseDto {
     private boolean isSold;
     private Long ownerId;
     private String imageUrl;
+    private List<String> imageUrls;
     private int views;
     private Map<String, String> localizedMessages;
 }

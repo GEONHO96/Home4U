@@ -37,7 +37,8 @@ public class PropertyService {
                 .additionalOptions(propertyDto.getAdditionalOptions())
                 .propertyType(propertyDto.getPropertyType())
                 .transactionType(propertyDto.getTransactionType())
-                .imageUrl(propertyDto.getImageUrl())
+                .imageUrl(resolveCoverImage(propertyDto))
+                .imageUrls(propertyDto.getImageUrls())
                 .isSold(false)
                 .owner(owner)
                 .build();
@@ -91,10 +92,23 @@ public class PropertyService {
         property.setTransactionType(dto.getTransactionType());
         property.setRoomStructure(dto.getRoomStructure());
         property.setAdditionalOptions(dto.getAdditionalOptions());
-        if (dto.getImageUrl() != null) {
-            property.setImageUrl(dto.getImageUrl());
+        if (dto.getImageUrls() != null) {
+            property.setImageUrls(dto.getImageUrls());
+        }
+        String cover = resolveCoverImage(dto);
+        if (cover != null) {
+            property.setImageUrl(cover);
         }
         return propertyRepository.save(property);
+    }
+
+    // 대표 이미지: 명시적으로 지정된 imageUrl > imageUrls[0]
+    private static String resolveCoverImage(PropertyDto dto) {
+        if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) return dto.getImageUrl();
+        if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
+            return dto.getImageUrls().get(0);
+        }
+        return null;
     }
 
     // ✅ 매물 삭제

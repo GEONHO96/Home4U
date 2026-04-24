@@ -92,6 +92,7 @@ export interface PropertyCreateRequest {
   roomStructure?: RoomStructure;
   additionalOptions?: AdditionalOption[];
   imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export interface Property extends PropertyCreateRequest {

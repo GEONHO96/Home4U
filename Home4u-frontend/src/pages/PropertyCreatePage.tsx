@@ -32,6 +32,7 @@ const INITIAL: PropertyCreateRequest = {
   roomStructure: undefined,
   additionalOptions: [],
   imageUrl: '',
+  imageUrls: [],
 };
 
 function PropertyCreatePage() {
@@ -130,6 +131,16 @@ function PropertyCreatePage() {
               value={form.imageUrl ?? ''}
               onChange={(e) => update('imageUrl', e.target.value || undefined)}
               placeholder="https://..."
+            />
+          </label>
+          <label>
+            이미지 URL (갤러리 · 한 줄에 하나씩)
+            <textarea
+              value={(form.imageUrls ?? []).join('\n')}
+              onChange={(e) => update('imageUrls',
+                e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))}
+              placeholder={'https://example.com/1.jpg\nhttps://example.com/2.jpg'}
+              rows={3}
             />
           </label>
           <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>

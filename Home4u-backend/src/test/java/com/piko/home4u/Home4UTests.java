@@ -19,13 +19,17 @@ import com.piko.home4u.model.Transaction;
 import com.piko.home4u.model.TransactionStatus;
 import com.piko.home4u.model.TransactionType;
 import com.piko.home4u.model.UserRole;
+import com.piko.home4u.controller.SavedSearchController;
 import com.piko.home4u.controller.TransactionController;
+import com.piko.home4u.dto.SavedSearchDto;
+import com.piko.home4u.model.SavedSearch;
 import com.piko.home4u.service.ApartmentService;
 import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.OAuthService;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.RealtorService;
 import com.piko.home4u.service.ReviewService;
+import com.piko.home4u.service.SavedSearchService;
 import com.piko.home4u.service.TransactionService;
 import com.piko.home4u.service.UserService;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -76,6 +80,7 @@ class Home4UTests {
     @Mock private OAuthService oAuthService;
     @Mock private TransactionService transactionService;
     @Mock private FavoriteService favoriteService;
+    @Mock private SavedSearchService savedSearchService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -86,6 +91,7 @@ class Home4UTests {
     @InjectMocks private OAuthController oAuthController;
     @InjectMocks private TransactionController transactionController;
     @InjectMocks private FavoriteController favoriteController;
+    @InjectMocks private SavedSearchController savedSearchController;
 
     @BeforeEach
     void setUp() {
@@ -98,7 +104,8 @@ class Home4UTests {
                         oAuthController,
                         realtorController,
                         transactionController,
-                        favoriteController
+                        favoriteController,
+                        savedSearchController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -216,6 +223,33 @@ class Home4UTests {
                 .andExpect(jsonPath("$.provider").value("google"))
                 .andExpect(jsonPath("$.configured").value(false))
                 .andExpect(jsonPath("$.url").value(""));
+    }
+
+    // ---- 3차 신규 API (SavedSearch) ----
+
+    @Test
+    void savedSearch_create_returnsIdAndName() throws Exception {
+        SavedSearch s = SavedSearch.builder().id(7L).name("내 검색").build();
+        when(savedSearchService.save(org.mockito.ArgumentMatchers.any(SavedSearchDto.class))).thenReturn(s);
+
+        mockMvc.perform(post("/saved-searches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":1,\"name\":\"내 검색\",\"transactionType\":\"SALE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.savedSearchId").value(7))
+                .andExpect(jsonPath("$.name").value("내 검색"));
+    }
+
+    @Test
+    void savedSearch_matching_returnsPropertyList() throws Exception {
+        Property p = new Property();
+        p.setId(1L);
+        p.setTitle("matched");
+        when(savedSearchService.runMatch(1L)).thenReturn(List.of(p));
+
+        mockMvc.perform(get("/saved-searches/{id}/matching", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("matched"));
     }
 
     // ---- 2차 신규 API 6종 ----

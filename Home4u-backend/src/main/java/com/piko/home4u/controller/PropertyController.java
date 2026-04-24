@@ -93,6 +93,7 @@ public class PropertyController {
                 .additionalOptions(property.getAdditionalOptions())
                 .isSold(property.isSold())
                 .imageUrl(property.getImageUrl())
+                .imageUrls(property.getImageUrls())
                 .views(property.getViews())
                 .ownerId(property.getOwner() != null ? property.getOwner().getId() : null)
                 .localizedMessages(Map.of(

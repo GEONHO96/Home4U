@@ -64,9 +64,10 @@ class PropertyServiceTest {
                 "dong", "gungu",
                 5,
                 40.0, 60.0,
-                null,
-                null,
-                null
+                null,   // roomStructure
+                null,   // additionalOptions
+                null,   // imageUrl
+                null    // imageUrls
         );
     }
 
@@ -184,5 +185,42 @@ class PropertyServiceTest {
                 .thenReturn(List.of(owned(1L, realtor(10L)), owned(2L, realtor(10L))));
 
         assertThat(service.getPropertiesByOwner(10L)).hasSize(2);
+    }
+
+    private PropertyDto dtoWith(String imageUrl, List<String> imageUrls) {
+        PropertyDto base = basicDto();
+        return new PropertyDto(
+                base.getTitle(), base.getDescription(), base.getPrice(),
+                base.getPropertyType(), base.getTransactionType(), base.getAddress(),
+                base.getLatitude(), base.getLongitude(),
+                base.getDong(), base.getGungu(),
+                base.getFloor(), base.getMinArea(), base.getMaxArea(),
+                base.getRoomStructure(), base.getAdditionalOptions(),
+                imageUrl,
+                imageUrls
+        );
+    }
+
+    @Test
+    void createProperty_usesImageUrlsFirstWhenCoverNotProvided() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(realtor(1L)));
+        when(propertyRepository.save(any(Property.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Property p = service.createProperty(
+                dtoWith(null, List.of("https://img/1.jpg", "https://img/2.jpg")), 1L);
+
+        assertThat(p.getImageUrl()).isEqualTo("https://img/1.jpg");
+        assertThat(p.getImageUrls()).containsExactly("https://img/1.jpg", "https://img/2.jpg");
+    }
+
+    @Test
+    void createProperty_explicitCoverOverridesGallery() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(realtor(1L)));
+        when(propertyRepository.save(any(Property.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Property p = service.createProperty(
+                dtoWith("https://img/cover.jpg", List.of("https://img/1.jpg")), 1L);
+
+        assertThat(p.getImageUrl()).isEqualTo("https://img/cover.jpg");
     }
 }

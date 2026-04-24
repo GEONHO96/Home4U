@@ -97,13 +97,14 @@
 
 | 기능 | 설명 |
 |:-----|:-----|
-| 지도 + 리스트 이중 뷰 | 좌측 매물 카드 리스트 + 우측 OSM 지도. 지도 위 가격 마커(“4.2억”) 클릭 → 상세 이동 |
-| 매물 목록·상세 | 대표 이미지 + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 |
+| 지도 + 리스트 이중 뷰 | 좌측 매물 카드 리스트 + 우측 OSM 지도. **가격 마커 클러스터링** · **드래그 후 "이 지역에서 검색"** 버튼 |
+| 매물 목록·상세 | **이미지 갤러리(다중)** + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 |
 | 지역·필터 검색 | 지역 프리셋(서울/강남/마포) + 거래유형/방구조/면적/층수 필터 칩 + 키워드 검색 |
+| **저장된 검색** | 필터 바의 "★ 조건 저장" 으로 등록, `/saved-searches` 에서 매칭되는 신규 매물 즉시 확인 |
 | 거래 요청 | 상세 페이지에서 단일 버튼으로 PENDING 거래 생성, seller 는 매물 소유자로 자동 설정 |
 | 찜하기 ♥ | 카드/상세에서 하트 토글, `/favorites` 에서 모아보기 |
 | 최근 본 매물 | localStorage 기반, 홈 화면에서 방금 본 매물 이어보기 (최대 6개) |
-| 리뷰 작성 | 별점 1~5 + 코멘트 형태로 매물 리뷰 작성, 본인 리뷰만 삭제 가능 |
+| 리뷰 | 별점 1~5 + 코멘트, **본인만 수정/삭제** |
 | 내 거래 내역 | 구매자/판매자 탭으로 시점 분리, 거래번호 · 매물 링크 · 상태 라벨 표시 |
 
 ### 공통
@@ -831,7 +832,7 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | Job | 내용 | 부가 산출물 |
 |:----|:-----|:----|
-| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 20 · 서비스 단위 33 = **53 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
+| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 22 · 서비스 단위 41 = **63 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
 | `frontend-build` | Node 20 · `npm ci` · `npm run build` (tsc + vite) | `Home4u-frontend/dist` (artifact: `frontend-dist`) |
 
 상단의 CI 뱃지가 **최신 main 빌드 상태**를 실시간으로 반영합니다. 실패 시 Actions 탭에서 원인 로그를 바로 확인할 수 있습니다.
@@ -852,7 +853,8 @@ docker run --rm -p 8081:80 home4u-frontend
 | 매물 | 12 | CRUD, 지도 검색, 상세 필터, 거래 요청/승인/거절, 수정(PUT), 인기(popular), **페이지네이션(`/page`)**, **인기 찜(`/most-favorited`)** |
 | 거래 | 6 | 구매자/판매자/상태/기간/매물 + 내 거래 요약(summary) |
 | 리뷰 | 6 | 작성, 조회, 평균 평점, 개수, **수정(PUT)**, 삭제 |
-| 찜(Favorite) | 7 | 추가, 삭제, 체크, 내 목록, 매물별 카운트, **내 카운트**, **랭킹** |
+| 찜(Favorite) | 7 | 추가, 삭제, 체크, 내 목록, 매물별 카운트, 내 카운트, 랭킹 |
+| **저장된 검색** | **4** | **등록·내 목록·삭제·매칭 매물 조회** |
 | 아파트 | 11 | 조회 8 + **CRUD 3** (POST/PUT/DELETE) |
 | 중개업자 | 8 | 조회 5 + **CRUD 3** (POST/PUT/DELETE) |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |

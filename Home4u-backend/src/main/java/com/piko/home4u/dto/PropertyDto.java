@@ -36,4 +36,5 @@ public class PropertyDto {
     private List<AdditionalOption> additionalOptions;
 
     private String imageUrl;
+    private List<String> imageUrls;
 }

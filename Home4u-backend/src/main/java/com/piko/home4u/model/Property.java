@@ -84,7 +84,12 @@ public class Property {
     private boolean isSold = false; // 거래 완료 여부 (JSON 필드명: "isSold")
 
     @Column(length = 1024)
-    private String imageUrl; // 대표 이미지 URL (선택)
+    private String imageUrl; // 대표 이미지 URL (선택, imageUrls 의 첫 번째 항목과 동기화)
+
+    @ElementCollection
+    @CollectionTable(name = "property_images", joinColumns = @JoinColumn(name = "property_id"))
+    @Column(name = "image_url", length = 1024)
+    private List<String> imageUrls; // 갤러리용 다중 이미지 URL (순서 유지)
 
     @Column(nullable = false)
     @Builder.Default
