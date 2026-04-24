@@ -75,8 +75,8 @@
 | ![detail](docs/screenshots/05-property-detail.png) | ![new](docs/screenshots/06-property-new.png) |
 | **내 거래 내역 (판매자 탭)** · 승인/거절 | **찜한 매물** · 카드 그리드 |
 | ![me](docs/screenshots/07-transactions-me.png) | ![fav](docs/screenshots/08-favorites.png) |
-| **오프라인 페이지** · PWA 네트워크 실패 시 폴백 |  |
-| ![offline](docs/screenshots/09-offline.png) |  |
+| **오프라인 페이지** · PWA 네트워크 실패 시 폴백 | **매물 상세 · 주변 시설 + 실거래가 차트** |
+| ![offline](docs/screenshots/09-offline.png) | ![nearby](docs/screenshots/10-property-detail-nearby.png) |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -98,7 +98,7 @@
 | 기능 | 설명 |
 |:-----|:-----|
 | 지도 + 리스트 이중 뷰 | 좌측 매물 카드 리스트 + 우측 OSM 지도. **가격 마커 클러스터링** · **드래그 후 "이 지역에서 검색"** 버튼 |
-| 매물 목록·상세 | **이미지 갤러리(다중)** + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 |
+| 매물 목록·상세 | 이미지 갤러리(다중) + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 + **주변 지하철/학교 + 실거래가 월별 추이 차트** |
 | 지역·필터 검색 | 지역 프리셋(서울/강남/마포) + 거래유형/방구조/면적/층수 필터 칩 + 키워드 검색 |
 | **저장된 검색** | 필터 바의 "★ 조건 저장" 으로 등록, `/saved-searches` 에서 매칭되는 신규 매물 즉시 확인 |
 | 거래 요청 | 상세 페이지에서 단일 버튼으로 PENDING 거래 생성, seller 는 매물 소유자로 자동 설정 |
@@ -832,7 +832,7 @@ docker run --rm -p 8081:80 home4u-frontend
 
 | Job | 내용 | 부가 산출물 |
 |:----|:-----|:----|
-| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 22 · 서비스 단위 41 = **63 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
+| `backend-test` | JDK 17 · Gradle · H2 in-memory · `./gradlew test` (컨트롤러 22 · 서비스 단위 45 · 유틸 3 = **70 tests**) | `Home4u-backend/build/reports/tests/test` (artifact: `backend-test-report`) |
 | `frontend-build` | Node 20 · `npm ci` · `npm run build` (tsc + vite) | `Home4u-frontend/dist` (artifact: `frontend-dist`) |
 
 상단의 CI 뱃지가 **최신 main 빌드 상태**를 실시간으로 반영합니다. 실패 시 Actions 탭에서 원인 로그를 바로 확인할 수 있습니다.
@@ -854,9 +854,11 @@ docker run --rm -p 8081:80 home4u-frontend
 | 거래 | 6 | 구매자/판매자/상태/기간/매물 + 내 거래 요약(summary) |
 | 리뷰 | 6 | 작성, 조회, 평균 평점, 개수, **수정(PUT)**, 삭제 |
 | 찜(Favorite) | 7 | 추가, 삭제, 체크, 내 목록, 매물별 카운트, 내 카운트, 랭킹 |
-| **저장된 검색** | **4** | **등록·내 목록·삭제·매칭 매물 조회** |
-| 아파트 | 11 | 조회 8 + **CRUD 3** (POST/PUT/DELETE) |
-| 중개업자 | 8 | 조회 5 + **CRUD 3** (POST/PUT/DELETE) |
+| 저장된 검색 | 4 | 등록·내 목록·삭제·매칭 매물 조회 |
+| **지하철·학교** | **2** | **`/subway/nearby` · `/schools/nearby` · 좌표 기반 Haversine + 도보분** |
+| **실거래가 (샘플)** | **3** | **`/apt-deals?apartmentName` · `/apt-deals/gungu` · `/apt-deals/monthly` (월평균)** |
+| 아파트 | 11 | 조회 8 + CRUD 3 |
+| 중개업자 | 8 | 조회 5 + CRUD 3 |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |
 
 <details>

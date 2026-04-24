@@ -5,6 +5,8 @@ import { requestTransaction } from '../api/transactionApi';
 import ReviewSection from '../components/ReviewSection';
 import FavoriteButton from '../components/FavoriteButton';
 import ImageGallery from '../components/ImageGallery';
+import NearbyPanel from '../components/NearbyPanel';
+import DealChart from '../components/DealChart';
 import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
@@ -154,6 +156,12 @@ function PropertyDetailPage() {
           {action.text}
         </div>
       )}
+
+      {Number.isFinite(item.latitude) && Number.isFinite(item.longitude) && (
+        <NearbyPanel lat={item.latitude} lng={item.longitude} />
+      )}
+
+      <DealChart apartmentName={item.title} />
 
       {item.id && <ReviewSection propertyId={item.id} />}
     </section>
