@@ -3,6 +3,7 @@ package com.piko.home4u.controller;
 import com.piko.home4u.model.Property;
 import com.piko.home4u.model.Transaction;
 import com.piko.home4u.model.User;
+import com.piko.home4u.service.AdminMetricsService;
 import com.piko.home4u.service.AdminService;
 import com.piko.home4u.service.PropertyService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final PropertyService propertyService;
+    private final AdminMetricsService adminMetricsService;
 
     @GetMapping("/summary")
     public ResponseEntity<AdminService.Summary> summary() {
@@ -53,5 +57,20 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> deleteProperty(@PathVariable Long id) {
         propertyService.deleteProperty(id);
         return ResponseEntity.ok(Map.of("propertyId", id, "message", "매물 삭제 성공"));
+    }
+
+    @GetMapping("/metrics/properties-per-day")
+    public ResponseEntity<List<AdminMetricsService.Bucket>> propertiesPerDay(@RequestParam(defaultValue = "14") int days) {
+        return ResponseEntity.ok(adminMetricsService.propertiesPerDay(days));
+    }
+
+    @GetMapping("/metrics/transactions-per-day")
+    public ResponseEntity<List<AdminMetricsService.Bucket>> transactionsPerDay(@RequestParam(defaultValue = "14") int days) {
+        return ResponseEntity.ok(adminMetricsService.transactionsPerDay(days));
+    }
+
+    @GetMapping("/metrics/price-distribution")
+    public ResponseEntity<Map<String, Long>> priceDistribution() {
+        return ResponseEntity.ok(adminMetricsService.priceDistribution());
     }
 }

@@ -61,3 +61,20 @@ export async function listAdminTransactions(): Promise<AdminTransaction[]> {
 export async function deleteAdminProperty(id: number): Promise<void> {
   await axiosInstance.delete(`/admin/properties/${id}`);
 }
+
+export interface MetricBucket { date: string; count: number; }
+
+export async function getPropertiesPerDay(days = 14): Promise<MetricBucket[]> {
+  const res = await axiosInstance.get<MetricBucket[]>('/admin/metrics/properties-per-day', { params: { days } });
+  return res.data;
+}
+
+export async function getTransactionsPerDay(days = 14): Promise<MetricBucket[]> {
+  const res = await axiosInstance.get<MetricBucket[]>('/admin/metrics/transactions-per-day', { params: { days } });
+  return res.data;
+}
+
+export async function getPriceDistribution(): Promise<Record<string, number>> {
+  const res = await axiosInstance.get<Record<string, number>>('/admin/metrics/price-distribution');
+  return res.data;
+}

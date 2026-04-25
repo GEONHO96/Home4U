@@ -17,6 +17,7 @@ import {
   resolveReport,
   type Report,
 } from '../api/reportApi';
+import AdminCharts from '../components/AdminCharts';
 import type { Property } from '../types/property';
 
 type Tab = 'summary' | 'users' | 'properties' | 'transactions' | 'reports';
@@ -124,6 +125,7 @@ function AdminPage() {
               </ul>
             </div>
           </div>
+          <AdminCharts />
         </div>
       )}
 
