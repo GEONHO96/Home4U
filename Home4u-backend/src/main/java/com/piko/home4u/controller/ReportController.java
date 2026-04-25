@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Reports", description = "매물·리뷰·사용자 신고 접수 + 관리자 처리완료/기각.")
 @RestController
 @RequiredArgsConstructor
 public class ReportController {

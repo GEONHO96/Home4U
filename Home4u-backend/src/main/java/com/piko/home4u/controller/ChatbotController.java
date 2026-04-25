@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Chatbot", description = "OpenAI 챗봇 — 키 미설정 시 키워드 기반 stub 응답.")
 @RestController
 @RequestMapping("/chatbot")
 @RequiredArgsConstructor

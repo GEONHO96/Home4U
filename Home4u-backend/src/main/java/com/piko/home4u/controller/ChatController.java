@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Chat", description = "1:1 채팅. STOMP /topic/chats.{roomId} 로 실시간 푸시도 함께 발송.")
 @RestController
 @RequestMapping("/chats")
 @RequiredArgsConstructor

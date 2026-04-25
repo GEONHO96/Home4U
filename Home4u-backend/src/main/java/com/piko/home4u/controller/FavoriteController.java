@@ -13,6 +13,7 @@ import java.util.Map;
  * 찜하기 (즐겨찾기) REST API.
  * userId 는 프론트가 JWT 에서 읽어 보낸다 (기존 /reviews 컨벤션과 동일).
  */
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Favorites", description = "매물 찜 토글 / 내 목록 / 매물·사용자별 카운트 / 인기 랭킹.")
 @RestController
 @RequestMapping("/favorites")
 @RequiredArgsConstructor

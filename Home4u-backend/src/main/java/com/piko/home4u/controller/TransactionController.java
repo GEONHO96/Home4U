@@ -13,6 +13,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Transactions", description = "거래 조회 (구매자/판매자/상태/날짜/매물별) + 내 거래 요약.")
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor

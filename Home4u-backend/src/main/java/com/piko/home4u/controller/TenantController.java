@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Tenants", description = "X-Tenant-Slug 헤더로 라우팅되는 테넌트 메타.")
 @RestController
 @RequestMapping("/tenants")
 @RequiredArgsConstructor

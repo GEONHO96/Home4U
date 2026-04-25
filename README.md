@@ -91,6 +91,8 @@
 | ![admin-charts](docs/screenshots/21-admin-charts.png) | ![payment](docs/screenshots/22-payment-button.png) |
 | **Home4U 도우미** · 우하단 FAB → OpenAI 챗봇 (키 미설정 시 stub) | **Swagger UI** · `springdoc-openapi` 자동 생성, JWT 인증 헤더 prefilled |
 | ![chatbot](docs/screenshots/23-chatbot-widget.png) | ![swagger](docs/screenshots/24-swagger-ui.png) |
+| **Swagger · Tag 그룹** · Reports/Admin/Tenants 등 도메인 단위로 정리 | |
+| ![swagger-tags](docs/screenshots/25-swagger-tags.png) | |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -138,9 +140,10 @@
 | 신고 큐 관리 | `/admin?tab=reports` — `/admin/reports` 호출, PENDING 항목을 `처리완료(RESOLVED)` 또는 `기각(DISMISSED)` 으로 1-클릭 전이 |
 | 운영 대시보드 | 요약 탭에 recharts 라인/바/파이 차트 — 14일 매물 등록·거래 추이 + 가격대 분포 |
 | 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지) |
-| 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property` 에 `tenant_id` FK** 가 부착되며 가입·매물 등록 시 자동 귀속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` 두 테넌트 |
-| OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 미리 등록. 108개 path 자동 노출 |
-| Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 3개 스모크 시나리오 (홈 네비게이션 / admin 차트 / 챗봇 stub). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
+| 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property`/`Transaction`/`Review`/`Favorite`/`SavedSearch` 에 `tenant_id` FK** 가 부착되며 생성 시 부모 엔티티(매물 또는 사용자)의 tenant 를 자동 상속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` |
+| OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 + 12개 컨트롤러에 `@Tag` 그룹 부여. 108개 path 자동 노출 |
+| Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 6개 스모크 시나리오 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
+| Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 
 ### 공통
 

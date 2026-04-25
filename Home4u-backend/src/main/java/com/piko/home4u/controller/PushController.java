@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Push", description = "Expo Push 디바이스 토큰 등록/해지. 채팅·거래 이벤트 발송 출처.")
 @RestController
 @RequestMapping("/push")
 @RequiredArgsConstructor

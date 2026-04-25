@@ -5,6 +5,8 @@ import com.piko.home4u.dto.PropertyResponseDto;
 import com.piko.home4u.model.*;
 import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.PropertyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+@Tag(name = "Properties", description = "매물 CRUD / 검색 / 필터 / 거래 요청·승인·거절 / 인기·페이지네이션·수정")
 @RestController
 @RequestMapping("/properties")
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class PropertyController {
     private final FavoriteService favoriteService;
     private final MessageSource messageSource;
 
-    // ✅ 매물 등록 API
+    @Operation(summary = "매물 등록", description = "ownerId 의 tenant 가 매물에 자동으로 부여된다.")
     @PostMapping
     public ResponseEntity<Map<String, Object>> createProperty(@RequestBody PropertyDto propertyDto,
                                                               @RequestParam Long ownerId) {

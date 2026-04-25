@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Registry / 안심거래", description = "등기부 검증 어댑터. home4u.registry.api-key 미설정 시 deterministic stub.")
 @RestController
 @RequestMapping("/registry")
 @RequiredArgsConstructor

@@ -7,6 +7,10 @@ import com.piko.home4u.model.User;
 import com.piko.home4u.service.PropertyService;
 import com.piko.home4u.service.UserService;
 import com.piko.home4u.service.UserStatsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Tag(name = "Users", description = "회원가입 / 로그인 / 사용자 검색 / 중개사 신뢰도 지표")
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -24,15 +29,16 @@ public class UserController {
     private final PropertyService propertyService;
     private final UserStatsService userStatsService;
 
-    // ✅ 회원가입 API (일반 사용자 & 공인중개사)
+    @Operation(summary = "회원가입", description = "ROLE_USER (일반) 또는 ROLE_REALTOR (중개사). REALTOR 는 licenseNumber/agencyName 추가.")
+    @SecurityRequirements // public
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody UserSignupDto userSignupDto) {
         userService.registerUser(userSignupDto);
         return ResponseEntity.ok(Map.of("message", "회원 가입 성공"));
     }
 
-    // ✅ 로그인 API (JWT 토큰 발급)
-    // 응답에 userId/role 을 함께 내려서 프론트에서 후속 요청 (예: POST /properties?ownerId=...) 에 쓸 수 있게 한다.
+    @Operation(summary = "로그인 (JWT 발급)", description = "응답으로 token/userId/username/role 을 받아 프론트가 후속 요청에 사용한다.")
+    @SecurityRequirements // public
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDto loginDto) {
         String token = userService.login(loginDto.getUsername(), loginDto.getPassword());
@@ -96,7 +102,9 @@ public class UserController {
         return ResponseEntity.ok(propertyService.getPropertiesByOwner(userId));
     }
 
-    // ✅ 중개사/매물 소유자 신뢰도 지표 (평점/리뷰/찜/거래완료율/응답속도)
+    @Operation(summary = "중개사 신뢰도 지표",
+            description = "리뷰 가중평균 평점, 누적 찜, 승인+완료 거래 비율, 채팅 응답 중위값(분).",
+            security = { @SecurityRequirement(name = "bearerAuth") })
     @GetMapping("/{userId}/realtor-stats")
     public ResponseEntity<UserStatsService.RealtorStats> getRealtorStats(@PathVariable Long userId) {
         return ResponseEntity.ok(userStatsService.computeRealtorStats(userId));

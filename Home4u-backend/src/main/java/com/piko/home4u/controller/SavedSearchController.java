@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "SavedSearch", description = "저장된 검색. 백그라운드 워커가 5분 주기로 매칭 매물을 푸시.")
 @RestController
 @RequestMapping("/saved-searches")
 @RequiredArgsConstructor

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Reviews", description = "매물 리뷰 CRUD + 평점/개수 집계.")
 @RestController
 @RequestMapping("/reviews")
 @RequiredArgsConstructor
