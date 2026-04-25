@@ -1,6 +1,7 @@
 package com.piko.home4u;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.piko.home4u.controller.AdminController;
 import com.piko.home4u.controller.ApartmentController;
 import com.piko.home4u.controller.FavoriteController;
 import com.piko.home4u.controller.OAuthController;
@@ -26,6 +27,7 @@ import com.piko.home4u.dto.SavedSearchDto;
 import com.piko.home4u.model.ChatMessage;
 import com.piko.home4u.model.ChatRoom;
 import com.piko.home4u.model.SavedSearch;
+import com.piko.home4u.service.AdminService;
 import com.piko.home4u.service.ApartmentService;
 import com.piko.home4u.service.ChatService;
 import com.piko.home4u.service.FavoriteService;
@@ -88,6 +90,7 @@ class Home4UTests {
     @Mock private SavedSearchService savedSearchService;
     @Mock private ChatService chatService;
     @Mock private UserStatsService userStatsService;
+    @Mock private AdminService adminService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -100,6 +103,7 @@ class Home4UTests {
     @InjectMocks private FavoriteController favoriteController;
     @InjectMocks private SavedSearchController savedSearchController;
     @InjectMocks private ChatController chatController;
+    @InjectMocks private AdminController adminController;
 
     @BeforeEach
     void setUp() {
@@ -114,7 +118,8 @@ class Home4UTests {
                         transactionController,
                         favoriteController,
                         savedSearchController,
-                        chatController
+                        chatController,
+                        adminController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -270,6 +275,34 @@ class Home4UTests {
         mockMvc.perform(get("/chats/{id}/unread-count", 1L).param("userId", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(4));
+    }
+
+    // ---- 6차 신규 API (Admin) ----
+
+    @Test
+    void admin_summary_returnsCounts() throws Exception {
+        AdminService.Summary sum = AdminService.Summary.builder()
+                .totalUsers(7)
+                .totalProperties(12)
+                .totalTransactions(5)
+                .usersByRole(java.util.Map.of("ROLE_USER", 5L, "ROLE_REALTOR", 1L, "ROLE_ADMIN", 1L))
+                .transactionsByStatus(java.util.Map.of("PENDING", 3L, "APPROVED", 1L, "COMPLETED", 1L))
+                .build();
+        when(adminService.summary()).thenReturn(sum);
+
+        mockMvc.perform(get("/admin/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalUsers").value(7))
+                .andExpect(jsonPath("$.totalProperties").value(12))
+                .andExpect(jsonPath("$.usersByRole.ROLE_USER").value(5));
+    }
+
+    @Test
+    void admin_deleteProperty_returnsSuccessMessage() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/admin/properties/{id}", 9L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.propertyId").value(9))
+                .andExpect(jsonPath("$.message").value("매물 삭제 성공"));
     }
 
     // ---- 5차 신규 API (RealtorStats) ----

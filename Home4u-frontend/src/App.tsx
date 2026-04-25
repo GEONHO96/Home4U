@@ -12,6 +12,7 @@ import SavedSearchesPage from './pages/SavedSearchesPage';
 import ChatListPage from './pages/ChatListPage';
 import ChatRoomPage from './pages/ChatRoomPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
+import AdminPage from './pages/AdminPage';
 import InstallPrompt from './components/InstallPrompt';
 import './App.css';
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="/chats" element={<ChatListPage />} />
           <Route path="/chats/:roomId" element={<ChatRoomPage />} />
           <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
       </Routes>
       <InstallPrompt />

@@ -79,8 +79,10 @@
 | ![offline](docs/screenshots/09-offline.png) | ![nearby](docs/screenshots/10-property-detail-nearby.png) |
 | **채팅 목록** · 상대 아바타 + 매물 태그 + 최근 시각 | **채팅방** · 버블 UI + 읽음 처리 + 5s 폴링 |
 | ![chat-list](docs/screenshots/11-chat-list.png) | ![chat-room](docs/screenshots/12-chat-room.png) |
-| **매물 상세 · 등록자 신뢰도 카드** · 평점 · 누적 찜 · 거래 완료율 · 응답 속도 중위값 | |
-| ![realtor-stats](docs/screenshots/13-realtor-stats.png) | |
+| **매물 상세 · 등록자 신뢰도 카드** · 평점 · 누적 찜 · 거래 완료율 · 응답 속도 중위값 | **관리자 콘솔 · 요약** · 사용자 / 매물 / 거래 카운트 + Role/Status 분포 |
+| ![realtor-stats](docs/screenshots/13-realtor-stats.png) | ![admin-summary](docs/screenshots/14-admin-summary.png) |
+| **관리자 콘솔 · 매물 관리** · 페이지네이션 + 매물 강제 삭제 | |
+| ![admin-properties](docs/screenshots/15-admin-properties.png) | |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -112,6 +114,15 @@
 | 최근 본 매물 | localStorage 기반, 홈 화면에서 방금 본 매물 이어보기 (최대 6개) |
 | 리뷰 | 별점 1~5 + 코멘트, **본인만 수정/삭제** |
 | 내 거래 내역 | 구매자/판매자 탭으로 시점 분리, 거래번호 · 매물 링크 · 상태 라벨 표시 |
+
+### 운영자 (ROLE_ADMIN)
+
+| 기능 | 설명 |
+|:-----|:-----|
+| 관리자 콘솔 | `/admin` 라우트 — 요약/사용자/매물/거래 4개 탭. `ROLE_ADMIN` 만 접근 (Spring Security `hasAuthority` + 프론트 Navigate 가드) |
+| 운영 통계 | 총 사용자/매물/거래 카운트, Role 분포, Transaction Status 분포 |
+| 매물 강제 삭제 | 부정 매물 등을 운영자 권한으로 즉시 삭제 |
+| 시드 계정 | dev 프로파일에서 `admin / admin1234` 자동 생성 |
 
 ### 공통
 
@@ -864,6 +875,7 @@ docker run --rm -p 8081:80 home4u-frontend
 | 지하철·학교 | 2 | `/subway/nearby` · `/schools/nearby` · 좌표 기반 Haversine + 도보분 |
 | 실거래가 (샘플) | 3 | `/apt-deals?apartmentName` · `/apt-deals/gungu` · `/apt-deals/monthly` |
 | **채팅 (1:1)** | **6** | **`POST /chats` (openRoom, 기존 방 재사용) · `GET /chats?userId` · `GET/POST /chats/{id}/messages` · `POST /chats/{id}/read` · `GET /chats/{id}/unread-count`** |
+| **관리자 콘솔** | **5** | **`GET /admin/summary` · `GET /admin/users` · `GET /admin/properties` (Pageable) · `GET /admin/transactions` · `DELETE /admin/properties/{id}`** (모두 `ROLE_ADMIN` 전용) |
 | 아파트 | 11 | 조회 8 + CRUD 3 |
 | 중개업자 | 8 | 조회 5 + CRUD 3 |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |

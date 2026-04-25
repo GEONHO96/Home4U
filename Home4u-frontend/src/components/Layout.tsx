@@ -62,6 +62,7 @@ function Layout() {
             {username && <HeaderLink to="/chats">채팅</HeaderLink>}
             {username && <HeaderLink to="/transactions/me">내 거래</HeaderLink>}
             {role === 'ROLE_REALTOR' && <HeaderLink to="/properties/new">매물 등록</HeaderLink>}
+            {role === 'ROLE_ADMIN' && <HeaderLink to="/admin">관리자</HeaderLink>}
             <span style={{ flex: '0 0 0.5rem' }} />
             {username ? (
               <>
@@ -74,6 +75,7 @@ function Layout() {
                 >
                   {username}
                   {role === 'ROLE_REALTOR' && ' · 공인중개사'}
+                  {role === 'ROLE_ADMIN' && ' · 관리자'}
                 </span>
                 <button type="button" className="ghost" onClick={logout}>
                   로그아웃

@@ -3,14 +3,18 @@ package com.piko.home4u.config;
 import com.piko.home4u.model.AptDeal;
 import com.piko.home4u.model.School;
 import com.piko.home4u.model.SubwayStation;
+import com.piko.home4u.model.User;
+import com.piko.home4u.model.UserRole;
 import com.piko.home4u.repository.AptDealRepository;
 import com.piko.home4u.repository.SchoolRepository;
 import com.piko.home4u.repository.SubwayStationRepository;
+import com.piko.home4u.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +36,8 @@ public class DataSeeder {
     private final SubwayStationRepository subwayRepo;
     private final SchoolRepository schoolRepo;
     private final AptDealRepository aptDealRepo;
+    private final UserRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
 
     @org.springframework.context.annotation.Bean
     public CommandLineRunner homeFourUSeeder() {
@@ -39,7 +45,21 @@ public class DataSeeder {
             seedSubway();
             seedSchools();
             seedAptDeals();
+            seedAdmin();
         };
+    }
+
+    private void seedAdmin() {
+        if (userRepo.findByUsername("admin").isPresent()) return;
+        User admin = new User(
+                "admin",
+                passwordEncoder.encode("admin1234"),
+                "admin@home4u.local",
+                "010-0000-0000",
+                UserRole.ROLE_ADMIN
+        );
+        userRepo.save(admin);
+        log.info("Seeded admin account: admin / admin1234");
     }
 
     private void seedSubway() {
