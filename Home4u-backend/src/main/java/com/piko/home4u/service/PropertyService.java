@@ -6,12 +6,17 @@ import com.piko.home4u.repository.PropertyRepository;
 import com.piko.home4u.repository.TransactionRepository;
 import com.piko.home4u.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class PropertyService {
+    @Autowired(required = false)
+    private PushService pushService;
+
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -162,7 +167,14 @@ public class PropertyService {
                 .status(TransactionStatus.PENDING) // 초기 상태: 대기
                 .build();
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+        if (pushService != null && property.getOwner() != null) {
+            pushService.sendToUser(property.getOwner().getId(),
+                    "새 거래 요청",
+                    buyer.getUsername() + "님이 \"" + property.getTitle() + "\" 거래를 요청했어요.",
+                    Map.of("type", "transaction.requested", "transactionId", saved.getId(), "propertyId", property.getId()));
+        }
+        return saved;
     }
 
     // ✅ 거래 승인 (판매자가 승인)
@@ -175,6 +187,13 @@ public class PropertyService {
 
         transactionRepository.save(transaction);
         propertyRepository.save(transaction.getProperty());
+
+        if (pushService != null && transaction.getBuyer() != null) {
+            pushService.sendToUser(transaction.getBuyer().getId(),
+                    "거래 승인",
+                    "\"" + transaction.getProperty().getTitle() + "\" 거래가 승인됐어요.",
+                    Map.of("type", "transaction.approved", "transactionId", transaction.getId()));
+        }
     }
 
     // ✅ 거래 거절 (판매자가 거절) — 매물의 isSold 는 건드리지 않는다
@@ -184,6 +203,13 @@ public class PropertyService {
 
         transaction.setStatus(TransactionStatus.REJECTED);
         transactionRepository.save(transaction);
+
+        if (pushService != null && transaction.getBuyer() != null) {
+            pushService.sendToUser(transaction.getBuyer().getId(),
+                    "거래 거절",
+                    "\"" + transaction.getProperty().getTitle() + "\" 거래가 거절됐어요.",
+                    Map.of("type", "transaction.rejected", "transactionId", transaction.getId()));
+        }
     }
 
     // ✅ 지도 기반 검색

@@ -3,6 +3,8 @@ package com.piko.home4u;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.AdminController;
 import com.piko.home4u.controller.ApartmentController;
+import com.piko.home4u.controller.PushController;
+import com.piko.home4u.controller.RegistryController;
 import com.piko.home4u.controller.ReportController;
 import com.piko.home4u.controller.FavoriteController;
 import com.piko.home4u.controller.OAuthController;
@@ -30,6 +32,8 @@ import com.piko.home4u.model.ChatRoom;
 import com.piko.home4u.model.SavedSearch;
 import com.piko.home4u.service.AdminService;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.PushService;
+import com.piko.home4u.service.RegistryService;
 import com.piko.home4u.service.ReportService;
 import com.piko.home4u.service.ChatService;
 import com.piko.home4u.service.FavoriteService;
@@ -94,6 +98,8 @@ class Home4UTests {
     @Mock private UserStatsService userStatsService;
     @Mock private AdminService adminService;
     @Mock private ReportService reportService;
+    @Mock private PushService pushService;
+    @Mock private RegistryService registryService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -108,6 +114,8 @@ class Home4UTests {
     @InjectMocks private ChatController chatController;
     @InjectMocks private AdminController adminController;
     @InjectMocks private ReportController reportController;
+    @InjectMocks private PushController pushController;
+    @InjectMocks private RegistryController registryController;
 
     @BeforeEach
     void setUp() {
@@ -124,7 +132,9 @@ class Home4UTests {
                         savedSearchController,
                         chatController,
                         adminController,
-                        reportController
+                        reportController,
+                        pushController,
+                        registryController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -280,6 +290,50 @@ class Home4UTests {
         mockMvc.perform(get("/chats/{id}/unread-count", 1L).param("userId", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(4));
+    }
+
+    // ---- 9차 신규 API (Registry) ----
+
+    @Test
+    void registry_lookup_returnsCleanReport() throws Exception {
+        com.piko.home4u.service.RegistryService.RegistryReport r =
+                com.piko.home4u.service.RegistryService.RegistryReport.builder()
+                        .propertyId(2L)
+                        .address("서울 강남구 대치동")
+                        .clean(true)
+                        .liens(0)
+                        .seizures(0)
+                        .source("stub")
+                        .ownerNameMasked("홍*동")
+                        .notes(java.util.List.of("로컬 stub 응답"))
+                        .build();
+        when(registryService.lookup(2L)).thenReturn(r);
+
+        mockMvc.perform(get("/registry/properties/{id}", 2L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.propertyId").value(2))
+                .andExpect(jsonPath("$.clean").value(true))
+                .andExpect(jsonPath("$.source").value("stub"))
+                .andExpect(jsonPath("$.ownerNameMasked").value("홍*동"));
+    }
+
+    // ---- 8차 신규 API (Push) ----
+
+    @Test
+    void push_register_returnsTokenId() throws Exception {
+        com.piko.home4u.model.PushToken pt = com.piko.home4u.model.PushToken.builder()
+                .id(11L).token("ExpoToken[abc]").platform("ios").build();
+        when(pushService.register(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq("ExpoToken[abc]"),
+                org.mockito.ArgumentMatchers.eq("ios"))).thenReturn(pt);
+
+        mockMvc.perform(post("/push/register").param("userId", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"ExpoToken[abc]\",\"platform\":\"ios\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenId").value(11))
+                .andExpect(jsonPath("$.platform").value("ios"));
     }
 
     // ---- 7차 신규 API (Report) ----

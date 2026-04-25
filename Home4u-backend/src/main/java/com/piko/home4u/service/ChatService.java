@@ -30,6 +30,10 @@ public class ChatService {
     @Autowired(required = false)
     private SimpMessagingTemplate messagingTemplate;
 
+    /** 모바일 푸시. 빈이 없거나 null 이면 스킵 — 단위 테스트 안전. */
+    @Autowired(required = false)
+    private PushService pushService;
+
     /**
      * 방을 생성하거나 기존 방 재사용. 본인과 대화방을 만들 수 없다.
      * propertyId 가 주어지면 자동으로 seller 는 property.owner.id 로 보정한다 (buyerId 가 매물 소유자면 거부).
@@ -102,7 +106,28 @@ public class ChatService {
         if (messagingTemplate != null) {
             messagingTemplate.convertAndSend("/topic/chats." + room.getId(), saved);
         }
+        // 상대방에게 푸시
+        if (pushService != null) {
+            Long peerId = peerOf(room, senderId);
+            if (peerId != null) {
+                String preview = content.length() > 60 ? content.substring(0, 60) + "…" : content;
+                pushService.sendToUser(peerId,
+                        sender.getUsername() + "님의 새 메시지",
+                        preview,
+                        java.util.Map.of("type", "chat", "roomId", room.getId()));
+            }
+        }
         return saved;
+    }
+
+    private static Long peerOf(ChatRoom room, Long me) {
+        if (room.getBuyer() != null && !Objects.equals(room.getBuyer().getId(), me)) {
+            return room.getBuyer().getId();
+        }
+        if (room.getSeller() != null && !Objects.equals(room.getSeller().getId(), me)) {
+            return room.getSeller().getId();
+        }
+        return null;
     }
 
     @Transactional

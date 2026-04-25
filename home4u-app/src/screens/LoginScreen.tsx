@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { login } from '../api';
+import { getSessionUserId, login } from '../api';
+import { usePushRegistration } from '../hooks/usePushRegistration';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -20,6 +21,8 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 로그인 성공 후 cachedUserId 가 채워지면 토큰 등록 훅이 발사됨
+  usePushRegistration(getSessionUserId());
 
   const onSubmit = async () => {
     setBusy(true);

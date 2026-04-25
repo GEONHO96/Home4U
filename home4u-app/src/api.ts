@@ -149,6 +149,10 @@ export async function requestTransaction(propertyId: number, buyerId: number) {
   return res.data;
 }
 
+export async function registerPushToken(userId: number, token: string, platform: string) {
+  await api.post('/push/register', { token, platform }, { params: { userId } });
+}
+
 export function formatPriceHuman(price: number): string {
   if (price >= 10000) {
     const eok = price / 10000;
