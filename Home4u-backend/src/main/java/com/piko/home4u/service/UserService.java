@@ -1,11 +1,14 @@
 package com.piko.home4u.service;
 
+import com.piko.home4u.config.TenantContext;
 import com.piko.home4u.dto.UserSignupDto;
 import com.piko.home4u.model.User;
 import com.piko.home4u.model.UserRole;
+import com.piko.home4u.repository.TenantRepository;
 import com.piko.home4u.repository.UserRepository;
 import com.piko.home4u.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,9 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+
+    @Autowired(required = false)
+    private TenantRepository tenantRepository;
 
     // ✅ 회원가입 로직 (일반 사용자 & 공인중개사)
     public User registerUser(UserSignupDto userSignupDto) {
@@ -38,6 +44,13 @@ public class UserService {
         if (role == UserRole.ROLE_REALTOR) { // ✅ ENUM 값 변경 반영
             user.setLicenseNumber(userSignupDto.getLicenseNumber()); // ✅ setter 메서드 사용
             user.setAgencyName(userSignupDto.getAgencyName()); // ✅ setter 메서드 사용
+        }
+
+        // 멀티테넌시: 가입 요청의 X-Tenant-Slug 헤더가 매핑한 테넌트에 귀속
+        if (tenantRepository != null) {
+            String slug = TenantContext.currentSlug();
+            if (slug == null || slug.isBlank()) slug = "default";
+            tenantRepository.findBySlug(slug).ifPresent(user::setTenant);
         }
 
         return userRepository.save(user);

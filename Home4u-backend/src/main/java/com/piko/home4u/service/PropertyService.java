@@ -46,6 +46,7 @@ public class PropertyService {
                 .imageUrls(propertyDto.getImageUrls())
                 .isSold(false)
                 .owner(owner)
+                .tenant(owner.getTenant()) // 매물은 소유자의 테넌트로 자동 귀속
                 .build();
 
         return propertyRepository.save(property);

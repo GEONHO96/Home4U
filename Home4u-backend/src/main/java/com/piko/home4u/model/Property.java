@@ -94,4 +94,10 @@ public class Property {
     @Column(nullable = false)
     @Builder.Default
     private int views = 0; // 상세 조회수
+
+    /** 멀티테넌시 — 등록 시점의 X-Tenant-Slug 가 가리킨 테넌트로 설정. legacy 는 default 로 backfill. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Tenant tenant;
 }

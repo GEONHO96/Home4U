@@ -38,6 +38,12 @@ public class User {
 
     private String agencyName;  // ✅ 중개업소 이름 (일반 사용자: null 허용)
 
+    /** 멀티테넌시 — 가입 시 X-Tenant-Slug 가 가리킨 테넌트로 설정. legacy 행은 default 로 backfill. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @JsonIgnore
+    private Tenant tenant;
+
     public User(String username, String password, String email, String phone, UserRole role) {
         this.username = username;
         this.password = password;

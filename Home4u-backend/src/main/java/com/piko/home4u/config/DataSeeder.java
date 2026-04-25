@@ -7,6 +7,7 @@ import com.piko.home4u.model.Tenant;
 import com.piko.home4u.model.User;
 import com.piko.home4u.model.UserRole;
 import com.piko.home4u.repository.AptDealRepository;
+import com.piko.home4u.repository.PropertyRepository;
 import com.piko.home4u.repository.SchoolRepository;
 import com.piko.home4u.repository.SubwayStationRepository;
 import com.piko.home4u.repository.TenantRepository;
@@ -40,17 +41,46 @@ public class DataSeeder {
     private final AptDealRepository aptDealRepo;
     private final UserRepository userRepo;
     private final TenantRepository tenantRepo;
+    private final PropertyRepository propertyRepo;
     private final PasswordEncoder passwordEncoder;
 
     @org.springframework.context.annotation.Bean
     public CommandLineRunner homeFourUSeeder() {
         return args -> {
             seedTenants();
+            backfillTenants();
             seedSubway();
             seedSchools();
             seedAptDeals();
             seedAdmin();
         };
+    }
+
+    /**
+     * 멀티테넌시 도입 직후 1회: tenant 컬럼이 비어있는 기존 User/Property 행을 'default' 로 채움.
+     * 이후 등록은 UserService/PropertyService 가 직접 세팅한다.
+     */
+    private void backfillTenants() {
+        var defaultTenant = tenantRepo.findBySlug("default").orElse(null);
+        if (defaultTenant == null) return;
+        int touched = 0;
+        for (User u : userRepo.findAll()) {
+            if (u.getTenant() == null) {
+                u.setTenant(defaultTenant);
+                userRepo.save(u);
+                touched++;
+            }
+        }
+        for (var p : propertyRepo.findAll()) {
+            if (p.getTenant() == null) {
+                p.setTenant(defaultTenant);
+                propertyRepo.save(p);
+                touched++;
+            }
+        }
+        if (touched > 0) {
+            log.info("Backfilled tenant=default on {} legacy rows", touched);
+        }
     }
 
     private void seedTenants() {
