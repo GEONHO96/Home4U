@@ -14,6 +14,7 @@ import ChatRoomPage from './pages/ChatRoomPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import AdminPage from './pages/AdminPage';
 import InstallPrompt from './components/InstallPrompt';
+import ChatbotWidget from './components/ChatbotWidget';
 import './App.css';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         </Route>
       </Routes>
       <InstallPrompt />
+      <ChatbotWidget />
     </>
   );
 }

@@ -87,6 +87,10 @@
 | ![admin-reports](docs/screenshots/17-admin-reports.png) | ![property-report](docs/screenshots/18-property-report-button.png) |
 | **안심거래 ✓** · 등기 검증 통과 매물 | **안심거래 ⚠** · 근저당/권리관계 주의 매물 |
 | ![safedeal-clean](docs/screenshots/19-safedeal-clean.png) | ![safedeal-warn](docs/screenshots/20-safedeal-warn.png) |
+| **운영 대시보드** · recharts 라인/바/파이 + Role/Status 분포 | **결제 흐름** · 승인된 거래 옆 결제하기 → COMPLETED 자동 전이 |
+| ![admin-charts](docs/screenshots/21-admin-charts.png) | ![payment](docs/screenshots/22-payment-button.png) |
+| **Home4U 도우미** · 우하단 FAB → OpenAI 챗봇 (키 미설정 시 stub) | |
+| ![chatbot](docs/screenshots/23-chatbot-widget.png) | |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -118,6 +122,8 @@
 | 최근 본 매물 | localStorage 기반, 홈 화면에서 방금 본 매물 이어보기 (최대 6개) |
 | 리뷰 | 별점 1~5 + 코멘트, **본인만 수정/삭제** · 타인 리뷰엔 🚩 신고 버튼 노출 |
 | **🚩 신고** | 매물·리뷰·사용자 단위로 사유 입력 후 접수, 관리자가 처리완료/기각으로 정리 |
+| **결제** | 승인된 거래 옆 "결제하기" → STUB/PG 게이트웨이로 confirm → 거래 자동 `COMPLETED`, 양측에 푸시 알림 |
+| **Home4U 도우미** | 우하단 💬 FAB 챗봇 — `openai.api.key` 미설정 시 keyword stub. 12턴까지 localStorage 보관 |
 | **안심거래 배지** | 매물 상세 가격 아래에 등기 검증 결과(`/registry/properties/{id}`) 표시. ✓ 안심 / ⚠ 권리관계 확인 필요 + 펼치면 근저당·압류·소유자 마스킹 정보 |
 | 내 거래 내역 | 구매자/판매자 탭으로 시점 분리, 거래번호 · 매물 링크 · 상태 라벨 표시 |
 
@@ -130,6 +136,9 @@
 | 매물 강제 삭제 | 부정 매물 등을 운영자 권한으로 즉시 삭제 |
 | 시드 계정 | dev 프로파일에서 `admin / admin1234` 자동 생성 |
 | 신고 큐 관리 | `/admin?tab=reports` — `/admin/reports` 호출, PENDING 항목을 `처리완료(RESOLVED)` 또는 `기각(DISMISSED)` 으로 1-클릭 전이 |
+| 운영 대시보드 | 요약 탭에 recharts 라인/바/파이 차트 — 14일 매물 등록·거래 추이 + 가격대 분포 |
+| 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지) |
+| 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. dev 시드: `default`, `demo-realty` 두 테넌트 |
 
 ### 공통
 
@@ -636,6 +645,8 @@ export MYSQL_PASSWORD=<your-password>
 | `OPENAI_API_KEY` | 챗봇 | 선택 |
 | `HOME4U_PUSH_ENABLED` (`home4u.push.enabled`) | `true` 일 때 Expo Push API 로 실 발송 / `false` (기본) 면 stub 로그만 | 선택 |
 | `HOME4U_REGISTRY_API_KEY` (`home4u.registry.api-key`) | 등기/안심거래 어댑터를 실 API 모드로 전환 (값이 없으면 stub) | 선택 |
+| `HOME4U_PAYMENT_PROVIDER` (`home4u.payment.provider`) | `STUB` (기본) · `TOSS` · `STRIPE` 등 PG 라우팅 키 | 선택 |
+| `OPENAI_MODEL` (`openai.model`) | 챗봇 모델 (기본 `gpt-4o-mini`) | 선택 |
 
 ---
 
@@ -890,6 +901,10 @@ docker run --rm -p 8081:80 home4u-frontend
 | **신고/모더레이션** | **5** | **`POST /reports` (PROPERTY/REVIEW/USER 신고) · `GET /reports/mine` · `GET /admin/reports?status=` · `PUT /admin/reports/{id}/resolve` · `PUT /admin/reports/{id}/dismiss`** |
 | **푸시 알림** | **2** | **`POST /push/register` · `DELETE /push/register?token=` — Expo Push API 로 채팅/거래 이벤트 발송** |
 | **등기/안심거래** | **1** | **`GET /registry/properties/{id}`** — `home4u.registry.api-key` 미설정 시 deterministic stub, 키 설정 시 등기소 어댑터 |
+| **결제** | **4** | **`POST /payments?transactionId=` · `POST /payments/{id}/confirm` · `POST /payments/{id}/fail` · `GET /payments/me`** — confirm 시 거래 자동 COMPLETED |
+| **운영 메트릭** | **3** | **`GET /admin/metrics/properties-per-day` · `GET /admin/metrics/transactions-per-day` · `GET /admin/metrics/price-distribution`** (관리자 전용) |
+| **테넌시** | **2** | **`GET /tenants/current` (헤더 `X-Tenant-Slug` 매핑) · `GET /tenants`** |
+| **챗봇** | **1** | **`POST /chatbot/ask`** — `openai.api.key` 미설정 시 키워드 기반 deterministic stub |
 | 아파트 | 11 | 조회 8 + CRUD 3 |
 | 중개업자 | 8 | 조회 5 + CRUD 3 |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |
