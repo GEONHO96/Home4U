@@ -47,6 +47,9 @@ public class SavedSearch {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    /** 백그라운드 워커가 마지막으로 매칭 알림을 보낸 시각 — 중복 푸시 방지. */
+    private LocalDateTime lastNotifiedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
