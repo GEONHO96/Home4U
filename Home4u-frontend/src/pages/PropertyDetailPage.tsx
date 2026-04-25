@@ -10,6 +10,7 @@ import NearbyPanel from '../components/NearbyPanel';
 import DealChart from '../components/DealChart';
 import RealtorCard from '../components/RealtorCard';
 import ReportButton from '../components/ReportButton';
+import SafeDealBadge from '../components/SafeDealBadge';
 import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
@@ -125,6 +126,11 @@ function PropertyDetailPage() {
           <div className="subtle" style={{ marginTop: '0.35rem', fontSize: '0.8rem' }}>
             조회 {views.toLocaleString()}회
           </div>
+          {item.id && (
+            <div style={{ marginTop: '0.6rem' }}>
+              <SafeDealBadge propertyId={item.id} />
+            </div>
+          )}
         </div>
       </div>
 
