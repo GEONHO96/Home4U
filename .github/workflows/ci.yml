@@ -56,7 +56,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check + production build
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
         run: npm run build
 
       - name: Upload dist (optional)
@@ -64,4 +70,56 @@ jobs:
         with:
           name: frontend-dist
           path: Home4u-frontend/dist
+          if-no-files-found: ignore
+
+  e2e:
+    name: Frontend · Playwright e2e (smoke)
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    defaults:
+      run:
+        working-directory: Home4u-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Home4u-frontend/package-lock.json
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Install web deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend (dev profile, H2 in-memory)
+        working-directory: Home4u-backend
+        run: |
+          chmod +x ./gradlew
+          SPRING_PROFILES_ACTIVE=dev nohup ./gradlew bootRun --no-daemon > backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fs -o /dev/null -X POST http://localhost:8080/users/login -H 'Content-Type: application/json' -d '{}' || curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/v3/api-docs | grep -qE '^[23]'; then
+              echo "backend up"; break; fi
+            sleep 2
+          done
+
+      - name: Run Playwright smoke tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: Home4u-frontend/playwright-report
           if-no-files-found: ignore
