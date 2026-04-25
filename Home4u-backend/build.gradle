@@ -34,6 +34,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'      // STOMP / WebSocket
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'      // OpenAPI 3 + Swagger UI
 
+    // ✅ Flyway — mysql 프로파일에서만 활성. dev (H2) 는 ddl-auto=update 유지.
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
+
     // ✅ JWT 관련 라이브러리 (JSON Web Token)
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
