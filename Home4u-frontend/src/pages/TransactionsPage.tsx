@@ -6,6 +6,7 @@ import {
   getTransactionsBySeller,
   rejectTransaction,
 } from '../api/transactionApi';
+import { confirmPayment, createPaymentIntent } from '../api/paymentApi';
 import { TRANSACTION_STATUSES, type Transaction, type TransactionStatus } from '../types/transaction';
 
 type Tab = 'buyer' | 'seller';
@@ -65,6 +66,25 @@ function TransactionsPage() {
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '거래 승인 실패');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handlePay = async (txId: number) => {
+    setBusyId(txId);
+    setError(null);
+    try {
+      const intent = await createPaymentIntent(txId);
+      // STUB 모드: 사용자가 동의하면 즉시 confirm 호출.
+      const ok = window.confirm(
+        `결제를 진행할까요?\n주문번호: ${intent.providerOrderId}\n금액: ${intent.amount.toLocaleString()}만원`,
+      );
+      if (!ok) return;
+      await confirmPayment(intent.id, `stub-key-${intent.id}`);
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '결제 실패');
     } finally {
       setBusyId(null);
     }
@@ -159,6 +179,13 @@ function TransactionsPage() {
                   </button>
                   <button type="button" onClick={() => handleReject(tx.id)} disabled={busyId === tx.id}>
                     거절
+                  </button>
+                </div>
+              )}
+              {tab === 'buyer' && tx.status === 'APPROVED' && (
+                <div style={{ marginTop: '0.7rem', display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" className="primary" onClick={() => handlePay(tx.id)} disabled={busyId === tx.id}>
+                    {busyId === tx.id ? '결제 중…' : '결제하기'}
                   </button>
                 </div>
               )}

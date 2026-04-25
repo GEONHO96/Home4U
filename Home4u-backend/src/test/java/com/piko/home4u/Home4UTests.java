@@ -3,6 +3,7 @@ package com.piko.home4u;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.AdminController;
 import com.piko.home4u.controller.ApartmentController;
+import com.piko.home4u.controller.PaymentController;
 import com.piko.home4u.controller.PushController;
 import com.piko.home4u.controller.RegistryController;
 import com.piko.home4u.controller.ReportController;
@@ -30,8 +31,10 @@ import com.piko.home4u.dto.SavedSearchDto;
 import com.piko.home4u.model.ChatMessage;
 import com.piko.home4u.model.ChatRoom;
 import com.piko.home4u.model.SavedSearch;
+import com.piko.home4u.service.AdminMetricsService;
 import com.piko.home4u.service.AdminService;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.PaymentService;
 import com.piko.home4u.service.PushService;
 import com.piko.home4u.service.RegistryService;
 import com.piko.home4u.service.ReportService;
@@ -97,9 +100,11 @@ class Home4UTests {
     @Mock private ChatService chatService;
     @Mock private UserStatsService userStatsService;
     @Mock private AdminService adminService;
+    @Mock private AdminMetricsService adminMetricsService;
     @Mock private ReportService reportService;
     @Mock private PushService pushService;
     @Mock private RegistryService registryService;
+    @Mock private PaymentService paymentService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -116,6 +121,7 @@ class Home4UTests {
     @InjectMocks private ReportController reportController;
     @InjectMocks private PushController pushController;
     @InjectMocks private RegistryController registryController;
+    @InjectMocks private PaymentController paymentController;
 
     @BeforeEach
     void setUp() {
@@ -134,7 +140,8 @@ class Home4UTests {
                         adminController,
                         reportController,
                         pushController,
-                        registryController
+                        registryController,
+                        paymentController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -292,6 +299,41 @@ class Home4UTests {
                 .andExpect(jsonPath("$.count").value(4));
     }
 
+    // ---- 10차 신규 API (Payment) ----
+
+    @Test
+    void payment_createIntent_returnsPending() throws Exception {
+        com.piko.home4u.model.Payment p = com.piko.home4u.model.Payment.builder()
+                .id(11L)
+                .amount(50000)
+                .status(com.piko.home4u.model.PaymentStatus.PENDING)
+                .providerOrderId("h4u-1-abc")
+                .build();
+        when(paymentService.createIntent(1L)).thenReturn(p);
+
+        mockMvc.perform(post("/payments").param("transactionId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(11))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.providerOrderId").value("h4u-1-abc"));
+    }
+
+    @Test
+    void payment_confirm_returnsSucceeded() throws Exception {
+        com.piko.home4u.model.Payment p = com.piko.home4u.model.Payment.builder()
+                .id(11L)
+                .status(com.piko.home4u.model.PaymentStatus.SUCCEEDED)
+                .providerPaymentKey("k-99")
+                .build();
+        when(paymentService.confirm(org.mockito.ArgumentMatchers.eq(11L), anyString())).thenReturn(p);
+
+        mockMvc.perform(post("/payments/{id}/confirm", 11L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentKey\":\"k-99\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+    }
+
     // ---- 9차 신규 API (Registry) ----
 
     @Test
@@ -370,6 +412,20 @@ class Home4UTests {
         mockMvc.perform(put("/admin/reports/{id}/resolve", 7L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
+    }
+
+    // ---- 11차 신규 API (Admin Metrics) ----
+
+    @Test
+    void admin_propertiesPerDay_returnsBuckets() throws Exception {
+        when(adminMetricsService.propertiesPerDay(7)).thenReturn(List.of(
+                AdminMetricsService.Bucket.builder().date("2026-04-19").count(2L).build(),
+                AdminMetricsService.Bucket.builder().date("2026-04-20").count(5L).build()
+        ));
+        mockMvc.perform(get("/admin/metrics/properties-per-day").param("days", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].date").value("2026-04-19"))
+                .andExpect(jsonPath("$[1].count").value(5));
     }
 
     // ---- 6차 신규 API (Admin) ----
