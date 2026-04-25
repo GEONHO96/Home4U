@@ -3,11 +3,13 @@ package com.piko.home4u.config;
 import com.piko.home4u.model.AptDeal;
 import com.piko.home4u.model.School;
 import com.piko.home4u.model.SubwayStation;
+import com.piko.home4u.model.Tenant;
 import com.piko.home4u.model.User;
 import com.piko.home4u.model.UserRole;
 import com.piko.home4u.repository.AptDealRepository;
 import com.piko.home4u.repository.SchoolRepository;
 import com.piko.home4u.repository.SubwayStationRepository;
+import com.piko.home4u.repository.TenantRepository;
 import com.piko.home4u.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,16 +39,27 @@ public class DataSeeder {
     private final SchoolRepository schoolRepo;
     private final AptDealRepository aptDealRepo;
     private final UserRepository userRepo;
+    private final TenantRepository tenantRepo;
     private final PasswordEncoder passwordEncoder;
 
     @org.springframework.context.annotation.Bean
     public CommandLineRunner homeFourUSeeder() {
         return args -> {
+            seedTenants();
             seedSubway();
             seedSchools();
             seedAptDeals();
             seedAdmin();
         };
+    }
+
+    private void seedTenants() {
+        if (tenantRepo.findBySlug("default").isEmpty()) {
+            tenantRepo.save(Tenant.builder().name("Home4U").slug("default").active(true).build());
+        }
+        if (tenantRepo.findBySlug("demo-realty").isEmpty()) {
+            tenantRepo.save(Tenant.builder().name("Demo Realty").slug("demo-realty").active(true).build());
+        }
     }
 
     private void seedAdmin() {
