@@ -40,6 +40,7 @@ public class SavedSearchService {
                 .minLng(dto.getMinLng())
                 .maxLng(dto.getMaxLng())
                 .keyword(dto.getKeyword())
+                .tenant(user.getTenant()) // 멀티테넌시 — 사용자의 tenant 상속
                 .build();
         return savedSearchRepository.save(entity);
     }

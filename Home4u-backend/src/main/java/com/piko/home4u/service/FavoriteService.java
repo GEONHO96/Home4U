@@ -29,7 +29,11 @@ public class FavoriteService {
                     Property property = propertyRepository.findById(propertyId)
                             .orElseThrow(() -> new RuntimeException("매물을 찾을 수 없습니다."));
                     return favoriteRepository.save(
-                            Favorite.builder().user(user).property(property).build());
+                            Favorite.builder()
+                                    .user(user)
+                                    .property(property)
+                                    .tenant(property.getTenant()) // 멀티테넌시 — 매물의 tenant 상속
+                                    .build());
                 });
     }
 

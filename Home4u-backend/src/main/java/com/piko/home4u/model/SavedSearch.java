@@ -50,6 +50,12 @@ public class SavedSearch {
     /** 백그라운드 워커가 마지막으로 매칭 알림을 보낸 시각 — 중복 푸시 방지. */
     private LocalDateTime lastNotifiedAt;
 
+    /** 멀티테넌시 — 검색 저장은 user 의 tenant 를 따라간다. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Tenant tenant;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

@@ -30,6 +30,12 @@ public class Favorite {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    /** 멀티테넌시 — 찜은 매물의 tenant 를 따라간다. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Tenant tenant;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

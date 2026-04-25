@@ -34,4 +34,10 @@ public class Transaction {
 
     // 거래 날짜 (findByDateBetween 에서 사용)
     private LocalDate date;
+
+    /** 멀티테넌시 — Property.tenant 와 일치해야 한다 (서비스 계층에서 설정). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Tenant tenant;
 }

@@ -35,6 +35,12 @@ public class Review {
     @Column(nullable = false)
     private LocalDateTime createdAt;  // 리뷰 작성 날짜
 
+    /** 멀티테넌시 — 리뷰는 Property.tenant 를 따라간다. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Tenant tenant;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

@@ -32,6 +32,7 @@ public class ReviewService {
                 .user(user)
                 .rating(rating)
                 .comment(comment)
+                .tenant(property.getTenant()) // 멀티테넌시 — 매물의 tenant 상속
                 .build();
 
         return reviewRepository.save(review);

@@ -160,12 +160,13 @@ public class PropertyService {
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new RuntimeException("구매자를 찾을 수 없습니다."));
 
-        // 거래 생성 (seller 는 매물 소유자)
+        // 거래 생성 (seller 는 매물 소유자) — tenant 는 매물 tenant 상속
         Transaction transaction = Transaction.builder()
                 .property(property)
                 .buyer(buyer)
                 .seller(property.getOwner())
                 .status(TransactionStatus.PENDING) // 초기 상태: 대기
+                .tenant(property.getTenant())
                 .build();
 
         Transaction saved = transactionRepository.save(transaction);

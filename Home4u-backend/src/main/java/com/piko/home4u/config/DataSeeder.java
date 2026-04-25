@@ -7,10 +7,14 @@ import com.piko.home4u.model.Tenant;
 import com.piko.home4u.model.User;
 import com.piko.home4u.model.UserRole;
 import com.piko.home4u.repository.AptDealRepository;
+import com.piko.home4u.repository.FavoriteRepository;
 import com.piko.home4u.repository.PropertyRepository;
+import com.piko.home4u.repository.ReviewRepository;
+import com.piko.home4u.repository.SavedSearchRepository;
 import com.piko.home4u.repository.SchoolRepository;
 import com.piko.home4u.repository.SubwayStationRepository;
 import com.piko.home4u.repository.TenantRepository;
+import com.piko.home4u.repository.TransactionRepository;
 import com.piko.home4u.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +46,10 @@ public class DataSeeder {
     private final UserRepository userRepo;
     private final TenantRepository tenantRepo;
     private final PropertyRepository propertyRepo;
+    private final TransactionRepository transactionRepo;
+    private final ReviewRepository reviewRepo;
+    private final FavoriteRepository favoriteRepo;
+    private final SavedSearchRepository savedSearchRepo;
     private final PasswordEncoder passwordEncoder;
 
     @org.springframework.context.annotation.Bean
@@ -78,8 +86,36 @@ public class DataSeeder {
                 touched++;
             }
         }
+        for (var t : transactionRepo.findAll()) {
+            if (t.getTenant() == null) {
+                t.setTenant(defaultTenant);
+                transactionRepo.save(t);
+                touched++;
+            }
+        }
+        for (var r : reviewRepo.findAll()) {
+            if (r.getTenant() == null) {
+                r.setTenant(defaultTenant);
+                reviewRepo.save(r);
+                touched++;
+            }
+        }
+        for (var f : favoriteRepo.findAll()) {
+            if (f.getTenant() == null) {
+                f.setTenant(defaultTenant);
+                favoriteRepo.save(f);
+                touched++;
+            }
+        }
+        for (var s : savedSearchRepo.findAll()) {
+            if (s.getTenant() == null) {
+                s.setTenant(defaultTenant);
+                savedSearchRepo.save(s);
+                touched++;
+            }
+        }
         if (touched > 0) {
-            log.info("Backfilled tenant=default on {} legacy rows", touched);
+            log.info("Backfilled tenant=default on {} legacy rows across all tenant-scoped entities", touched);
         }
     }
 
