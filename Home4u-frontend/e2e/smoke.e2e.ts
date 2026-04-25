@@ -37,6 +37,6 @@ test('Home4U 도우미 챗봇이 stub 모드로 응답한다', async ({ page }) 
   await expect(dialog).toBeVisible();
   await dialog.getByPlaceholder('질문을 입력하세요').fill('안심거래는 어떻게 진행돼?');
   await dialog.getByRole('button', { name: /^전송|^…/ }).click();
-  // assistant 응답이 등장 (stub 모드 키워드 매칭)
-  await expect(dialog.getByText(/등기|배지|안심/)).toBeVisible({ timeout: 15_000 });
+  // assistant 응답이 등장 (stub 모드 키워드 매칭) — 사용자 메시지/어시스턴트 메시지 둘 다 매칭될 수 있으니 last() 로 어시스턴트 쪽 확인
+  await expect(dialog.getByText(/등기|배지|안심거래|안심결제/).last()).toBeVisible({ timeout: 15_000 });
 });
