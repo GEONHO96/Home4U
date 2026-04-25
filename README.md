@@ -81,8 +81,8 @@
 | ![chat-list](docs/screenshots/11-chat-list.png) | ![chat-room](docs/screenshots/12-chat-room.png) |
 | **매물 상세 · 등록자 신뢰도 카드** · 평점 · 누적 찜 · 거래 완료율 · 응답 속도 중위값 | **관리자 콘솔 · 요약** · 사용자 / 매물 / 거래 카운트 + Role/Status 분포 |
 | ![realtor-stats](docs/screenshots/13-realtor-stats.png) | ![admin-summary](docs/screenshots/14-admin-summary.png) |
-| **관리자 콘솔 · 매물 관리** · 페이지네이션 + 매물 강제 삭제 | |
-| ![admin-properties](docs/screenshots/15-admin-properties.png) | |
+| **관리자 콘솔 · 매물 관리** · 페이지네이션 + 매물 강제 삭제 | **실시간 채팅** · STOMP `/topic/chats.{roomId}` 구독으로 폴링 없는 즉시 수신 |
+| ![admin-properties](docs/screenshots/15-admin-properties.png) | ![chat-realtime](docs/screenshots/16-chat-realtime.png) |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -105,7 +105,7 @@
 |:-----|:-----|
 | 지도 + 리스트 이중 뷰 | 좌측 매물 카드 리스트 + 우측 OSM 지도. **가격 마커 클러스터링** · **드래그 후 "이 지역에서 검색"** 버튼 |
 | 매물 목록·상세 | 이미지 갤러리(다중) + 가격 강조 + 거래유형·평형·층·방구조 등 핵심 스펙 + 조회수 + 주변 지하철/학교 + 실거래가 월별 추이 차트 + **채팅 문의 버튼** |
-| **1:1 채팅** | 상세에서 "💬 채팅 문의" → 방 생성/재사용 후 `/chats/{id}` 이동. 내/상대 버블 UI, 읽음 처리, 5초 폴링으로 신규 메시지 갱신, `/chats` 에 전체 목록 |
+| **1:1 채팅** | 상세에서 "💬 채팅 문의" → 방 생성/재사용 후 `/chats/{id}` 이동. 내/상대 버블 UI, 읽음 처리, **STOMP WebSocket 구독으로 실시간 수신** (폴링 fallback 제거), `/chats` 에 전체 목록 |
 | **등록자 신뢰도 카드** | 매물 상세에 "등록자 정보" 미니 카드. 누적 리뷰·평점 가중평균, 누적 찜 수, 거래 승인/완료율, 채팅 응답 속도 중위값 (분) 을 4-grid 로 집계 |
 | 지역·필터 검색 | 지역 프리셋(서울/강남/마포) + 거래유형/방구조/면적/층수 필터 칩 + 키워드 검색 |
 | **저장된 검색** | 필터 바의 "★ 조건 저장" 으로 등록, `/saved-searches` 에서 매칭되는 신규 매물 즉시 확인 |
@@ -147,6 +147,7 @@
 | Spring Security | 6.x | 인증/인가 (JWT 기반 stateless) |
 | Spring Data JPA | 3.x | ORM |
 | jjwt | 0.11.5 | JWT 발급/검증 |
+| Spring WebSocket (STOMP) | — | 실시간 채팅 메시지 broadcast (`/topic/chats.{roomId}`) |
 | BCrypt | - | 비밀번호 해시 |
 | H2 Database | - | 개발 인메모리 (기본 프로파일) |
 | MySQL | 8 | 운영 DB (`mysql` 프로파일) |
@@ -164,6 +165,7 @@
 | Vite | 6 | 개발 서버 / 빌드 |
 | React Router DOM | 7 | 클라이언트 라우팅 |
 | Axios | 1.8 | HTTP 클라이언트 (JWT 자동 주입 인터셉터) |
+| @stomp/stompjs | 7 | WebSocket STOMP 클라이언트 (실시간 채팅) |
 
 ### 도메인 모델 핵심 Enum
 

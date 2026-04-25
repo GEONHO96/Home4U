@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { listMessages, markRead, sendMessage } from '../api/chatApi';
+import { useChatStomp } from '../hooks/useChatStomp';
 import type { ChatMessage } from '../types/chat';
 
 export default function ChatRoomPage() {
@@ -35,11 +36,20 @@ export default function ChatRoomPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // 5초 간격 폴링 (WebSocket 도입 전 임시 실시간성)
-  useEffect(() => {
-    const id = window.setInterval(load, 5000);
-    return () => window.clearInterval(id);
-  }, [load]);
+  // STOMP 구독 — 신규 메시지 도착 시 list 에 추가 (중복 방지: id 기준)
+  useChatStomp(roomIdNum, (incoming) => {
+    setMessages((prev) => {
+      if (!prev) return [incoming];
+      if (prev.some((m) => m.id === incoming.id)) return prev;
+      return [...prev, incoming];
+    });
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }, 0);
+    if (roomIdNum && myUserId && incoming.sender?.id !== myUserId) {
+      markRead(roomIdNum, myUserId).catch(() => {});
+    }
+  });
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,9 +58,17 @@ export default function ChatRoomPage() {
     if (!content) return;
     setSending(true);
     try {
-      await sendMessage(roomIdNum, myUserId, content);
+      const saved = await sendMessage(roomIdNum, myUserId, content);
       setInput('');
-      await load();
+      // 송신자에게도 STOMP 가 echo 되지만, 즉시성을 위해 낙관적 추가 (id 기준 중복 방지)
+      setMessages((prev) => {
+        if (!prev) return [saved];
+        if (prev.some((m) => m.id === saved.id)) return prev;
+        return [...prev, saved];
+      });
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      }, 0);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     } finally {

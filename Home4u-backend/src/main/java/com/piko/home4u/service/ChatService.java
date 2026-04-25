@@ -9,6 +9,8 @@ import com.piko.home4u.repository.ChatRoomRepository;
 import com.piko.home4u.repository.PropertyRepository;
 import com.piko.home4u.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,10 @@ public class ChatService {
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final PropertyRepository propertyRepository;
+
+    /** STOMP broker. WebSocketConfig 가 활성화되면 자동 주입, 없으면(또는 단위 테스트) null 이면 broadcast skip. */
+    @Autowired(required = false)
+    private SimpMessagingTemplate messagingTemplate;
 
     /**
      * 방을 생성하거나 기존 방 재사용. 본인과 대화방을 만들 수 없다.
@@ -91,6 +97,11 @@ public class ChatService {
 
         room.setLastMessageAt(LocalDateTime.now());
         roomRepository.save(room);
+
+        // STOMP broadcast to subscribers of this room (subscription path: /topic/chats.{roomId}).
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSend("/topic/chats." + room.getId(), saved);
+        }
         return saved;
     }
 
