@@ -83,6 +83,8 @@
 | ![realtor-stats](docs/screenshots/13-realtor-stats.png) | ![admin-summary](docs/screenshots/14-admin-summary.png) |
 | **관리자 콘솔 · 매물 관리** · 페이지네이션 + 매물 강제 삭제 | **실시간 채팅** · STOMP `/topic/chats.{roomId}` 구독으로 폴링 없는 즉시 수신 |
 | ![admin-properties](docs/screenshots/15-admin-properties.png) | ![chat-realtime](docs/screenshots/16-chat-realtime.png) |
+| **관리자 · 신고 큐** · 처리완료/기각 1-클릭 운영 | **매물 상세 · 🚩 신고 버튼** · 클릭 시 사유 prompt 후 접수 |
+| ![admin-reports](docs/screenshots/17-admin-reports.png) | ![property-report](docs/screenshots/18-property-report-button.png) |
 
 > 스크린샷은 Windows Edge headless 로 자동 캡처합니다 (`docs/screenshots/`).  
 > 재캡처 스크립트와 스크린샷용 bootstrap HTML (`public/screenshot-bootstrap.html`) 은 `docs/` 하위에서 확인하세요.
@@ -112,7 +114,8 @@
 | 거래 요청 | 상세 페이지에서 단일 버튼으로 PENDING 거래 생성, seller 는 매물 소유자로 자동 설정 |
 | 찜하기 ♥ | 카드/상세에서 하트 토글, `/favorites` 에서 모아보기 |
 | 최근 본 매물 | localStorage 기반, 홈 화면에서 방금 본 매물 이어보기 (최대 6개) |
-| 리뷰 | 별점 1~5 + 코멘트, **본인만 수정/삭제** |
+| 리뷰 | 별점 1~5 + 코멘트, **본인만 수정/삭제** · 타인 리뷰엔 🚩 신고 버튼 노출 |
+| **🚩 신고** | 매물·리뷰·사용자 단위로 사유 입력 후 접수, 관리자가 처리완료/기각으로 정리 |
 | 내 거래 내역 | 구매자/판매자 탭으로 시점 분리, 거래번호 · 매물 링크 · 상태 라벨 표시 |
 
 ### 운영자 (ROLE_ADMIN)
@@ -123,6 +126,7 @@
 | 운영 통계 | 총 사용자/매물/거래 카운트, Role 분포, Transaction Status 분포 |
 | 매물 강제 삭제 | 부정 매물 등을 운영자 권한으로 즉시 삭제 |
 | 시드 계정 | dev 프로파일에서 `admin / admin1234` 자동 생성 |
+| 신고 큐 관리 | `/admin?tab=reports` — `/admin/reports` 호출, PENDING 항목을 `처리완료(RESOLVED)` 또는 `기각(DISMISSED)` 으로 1-클릭 전이 |
 
 ### 공통
 
@@ -878,6 +882,7 @@ docker run --rm -p 8081:80 home4u-frontend
 | 실거래가 (샘플) | 3 | `/apt-deals?apartmentName` · `/apt-deals/gungu` · `/apt-deals/monthly` |
 | **채팅 (1:1)** | **6** | **`POST /chats` (openRoom, 기존 방 재사용) · `GET /chats?userId` · `GET/POST /chats/{id}/messages` · `POST /chats/{id}/read` · `GET /chats/{id}/unread-count`** |
 | **관리자 콘솔** | **5** | **`GET /admin/summary` · `GET /admin/users` · `GET /admin/properties` (Pageable) · `GET /admin/transactions` · `DELETE /admin/properties/{id}`** (모두 `ROLE_ADMIN` 전용) |
+| **신고/모더레이션** | **5** | **`POST /reports` (PROPERTY/REVIEW/USER 신고) · `GET /reports/mine` · `GET /admin/reports?status=` · `PUT /admin/reports/{id}/resolve` · `PUT /admin/reports/{id}/dismiss`** |
 | 아파트 | 11 | 조회 8 + CRUD 3 |
 | 중개업자 | 8 | 조회 5 + CRUD 3 |
 | 게시글 · FAQ · OAuth · 챗봇 · 크롤러 · 지도 · i18n | 기타 | 백엔드 준비, 프론트 UI 는 로드맵 참조 |

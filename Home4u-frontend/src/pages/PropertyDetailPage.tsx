@@ -9,6 +9,7 @@ import ImageGallery from '../components/ImageGallery';
 import NearbyPanel from '../components/NearbyPanel';
 import DealChart from '../components/DealChart';
 import RealtorCard from '../components/RealtorCard';
+import ReportButton from '../components/ReportButton';
 import { pushRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { Property } from '../types/property';
 import { PROPERTY_TYPES, TRANSACTION_TYPES, ROOM_STRUCTURES } from '../types/property';
@@ -111,6 +112,9 @@ function PropertyDetailPage() {
             {item.isSold && <span className="badge badge-sold">거래완료</span>}
             <span style={{ flex: 1 }} />
             {item.id && <FavoriteButton propertyId={item.id} />}
+            {item.id && myUserId != null && !isOwner && (
+              <ReportButton targetType="PROPERTY" targetId={item.id} />
+            )}
           </div>
 
           <h1 style={{ margin: '0.25rem 0 0.2rem', fontSize: '1.45rem' }}>{item.title}</h1>

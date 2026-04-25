@@ -7,6 +7,7 @@ import {
   getReviewsByProperty,
 } from '../api/reviewApi';
 import type { Review } from '../types/review';
+import ReportButton from './ReportButton';
 
 interface Props {
   propertyId: number;
@@ -147,11 +148,16 @@ function ReviewSection({ propertyId }: Props) {
                 </small>
               </div>
               <p style={{ margin: '0.25rem 0' }}>{r.comment}</p>
-              {myUserId != null && r.user?.id === myUserId && (
-                <button type="button" onClick={() => handleDelete(r.id)} style={{ fontSize: '0.85em' }}>
-                  내 리뷰 삭제
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem' }}>
+                {myUserId != null && r.user?.id === myUserId && (
+                  <button type="button" onClick={() => handleDelete(r.id)} style={{ fontSize: '0.85em' }}>
+                    내 리뷰 삭제
+                  </button>
+                )}
+                {myUserId != null && r.user?.id !== myUserId && (
+                  <ReportButton targetType="REVIEW" targetId={r.id} />
+                )}
+              </div>
             </li>
           ))}
         </ul>

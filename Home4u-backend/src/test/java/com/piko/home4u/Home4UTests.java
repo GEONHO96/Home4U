@@ -3,6 +3,7 @@ package com.piko.home4u;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piko.home4u.controller.AdminController;
 import com.piko.home4u.controller.ApartmentController;
+import com.piko.home4u.controller.ReportController;
 import com.piko.home4u.controller.FavoriteController;
 import com.piko.home4u.controller.OAuthController;
 import com.piko.home4u.controller.PropertyController;
@@ -29,6 +30,7 @@ import com.piko.home4u.model.ChatRoom;
 import com.piko.home4u.model.SavedSearch;
 import com.piko.home4u.service.AdminService;
 import com.piko.home4u.service.ApartmentService;
+import com.piko.home4u.service.ReportService;
 import com.piko.home4u.service.ChatService;
 import com.piko.home4u.service.FavoriteService;
 import com.piko.home4u.service.OAuthService;
@@ -91,6 +93,7 @@ class Home4UTests {
     @Mock private ChatService chatService;
     @Mock private UserStatsService userStatsService;
     @Mock private AdminService adminService;
+    @Mock private ReportService reportService;
     @Mock private MessageSource messageSource;
 
     @InjectMocks private ApartmentController apartmentController;
@@ -104,6 +107,7 @@ class Home4UTests {
     @InjectMocks private SavedSearchController savedSearchController;
     @InjectMocks private ChatController chatController;
     @InjectMocks private AdminController adminController;
+    @InjectMocks private ReportController reportController;
 
     @BeforeEach
     void setUp() {
@@ -119,7 +123,8 @@ class Home4UTests {
                         favoriteController,
                         savedSearchController,
                         chatController,
-                        adminController
+                        adminController,
+                        reportController
                 )
                 .setCustomArgumentResolvers(
                         new org.springframework.data.web.PageableHandlerMethodArgumentResolver())
@@ -275,6 +280,42 @@ class Home4UTests {
         mockMvc.perform(get("/chats/{id}/unread-count", 1L).param("userId", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(4));
+    }
+
+    // ---- 7차 신규 API (Report) ----
+
+    @Test
+    void report_file_returnsId() throws Exception {
+        com.piko.home4u.model.Report r = com.piko.home4u.model.Report.builder()
+                .id(42L)
+                .status(com.piko.home4u.model.ReportStatus.PENDING)
+                .build();
+        when(reportService.file(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(com.piko.home4u.model.ReportTargetType.PROPERTY),
+                org.mockito.ArgumentMatchers.eq(99L),
+                anyString()))
+                .thenReturn(r);
+
+        mockMvc.perform(post("/reports").param("reporterId", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetType\":\"PROPERTY\",\"targetId\":99,\"reason\":\"허위 매물\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value(42))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    void report_resolve_returnsResolvedStatus() throws Exception {
+        com.piko.home4u.model.Report r = com.piko.home4u.model.Report.builder()
+                .id(7L)
+                .status(com.piko.home4u.model.ReportStatus.RESOLVED)
+                .build();
+        when(reportService.transition(7L, com.piko.home4u.model.ReportStatus.RESOLVED)).thenReturn(r);
+
+        mockMvc.perform(put("/admin/reports/{id}/resolve", 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
     }
 
     // ---- 6차 신규 API (Admin) ----

@@ -11,9 +11,15 @@ import {
   type AdminUser,
   type Page,
 } from '../api/adminApi';
+import {
+  dismissReport,
+  listAdminReports,
+  resolveReport,
+  type Report,
+} from '../api/reportApi';
 import type { Property } from '../types/property';
 
-type Tab = 'summary' | 'users' | 'properties' | 'transactions';
+type Tab = 'summary' | 'users' | 'properties' | 'transactions' | 'reports';
 
 function roleLabel(role: string): string {
   if (role === 'ROLE_ADMIN') return '관리자';
@@ -34,6 +40,7 @@ function AdminPage() {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [propertiesPage, setPropertiesPage] = useState<Page<Property> | null>(null);
   const [transactions, setTransactions] = useState<AdminTransaction[] | null>(null);
+  const [reports, setReports] = useState<Report[] | null>(null);
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +51,18 @@ function AdminPage() {
     else if (tab === 'users') listAdminUsers().then(setUsers).catch(handleErr);
     else if (tab === 'properties') listAdminProperties(page, 20).then(setPropertiesPage).catch(handleErr);
     else if (tab === 'transactions') listAdminTransactions().then(setTransactions).catch(handleErr);
+    else if (tab === 'reports') listAdminReports().then(setReports).catch(handleErr);
   }, [tab, page, role]);
+
+  async function handleReportTransition(id: number, action: 'resolve' | 'dismiss') {
+    try {
+      if (action === 'resolve') await resolveReport(id);
+      else await dismissReport(id);
+      setReports(await listAdminReports());
+    } catch (e) {
+      handleErr(e);
+    }
+  }
 
   function handleErr(e: unknown) {
     const msg = e instanceof Error ? e.message : '불러오지 못했습니다.';
@@ -72,6 +90,7 @@ function AdminPage() {
         <TabBtn active={tab === 'users'} onClick={() => setTab('users')}>사용자</TabBtn>
         <TabBtn active={tab === 'properties'} onClick={() => setTab('properties')}>매물</TabBtn>
         <TabBtn active={tab === 'transactions'} onClick={() => setTab('transactions')}>거래</TabBtn>
+        <TabBtn active={tab === 'reports'} onClick={() => setTab('reports')}>신고</TabBtn>
       </div>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
@@ -168,6 +187,50 @@ function AdminPage() {
               <button type="button" className="ghost" disabled={page + 1 >= propertiesPage.totalPages} onClick={() => setPage((p) => p + 1)}>다음 →</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === 'reports' && reports && (
+        <div className="card">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ background: 'var(--color-bg-muted, #f5f7fb)' }}>
+                <th style={th}>ID</th>
+                <th style={th}>대상</th>
+                <th style={th}>사유</th>
+                <th style={th}>신고자</th>
+                <th style={th}>접수일</th>
+                <th style={th}>상태</th>
+                <th style={th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.length === 0 && (
+                <tr><td style={td} colSpan={7} className="muted">접수된 신고가 없습니다.</td></tr>
+              )}
+              {reports.map((r) => (
+                <tr key={r.id} style={{ borderTop: '1px solid var(--color-border)' }}>
+                  <td style={td}>{r.id}</td>
+                  <td style={td}>
+                    {r.targetType === 'PROPERTY' ? <Link to={`/properties/${r.targetId}`}>매물 #{r.targetId}</Link>
+                      : `${r.targetType} #${r.targetId}`}
+                  </td>
+                  <td style={td}>{r.reason}</td>
+                  <td style={td}>{r.reporter?.username ?? '-'}</td>
+                  <td style={td}>{new Date(r.createdAt).toLocaleString('ko-KR')}</td>
+                  <td style={td}>{r.status}</td>
+                  <td style={td}>
+                    {r.status === 'PENDING' && (
+                      <>
+                        <button type="button" className="ghost" onClick={() => handleReportTransition(r.id, 'resolve')}>처리완료</button>
+                        <button type="button" className="ghost" onClick={() => handleReportTransition(r.id, 'dismiss')}>기각</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
