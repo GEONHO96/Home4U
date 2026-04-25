@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/users/register", "/users/login", "/oauth/**",
-                                "/swagger-ui/**", "/v3/api-docs/**",
+                                "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                                 "/ws-chat/**",
                                 "/tenants/current",
                                 "/chatbot/**").permitAll()
