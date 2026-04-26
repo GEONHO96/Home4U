@@ -140,10 +140,11 @@
 | 신고 큐 관리 | `/admin?tab=reports` — `/admin/reports` 호출, PENDING 항목을 `처리완료(RESOLVED)` 또는 `기각(DISMISSED)` 으로 1-클릭 전이 |
 | 운영 대시보드 | 요약 탭에 recharts 라인/바/파이 차트 — 14일 매물 등록·거래 추이 + 가격대 분포 |
 | 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지) |
-| 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property`/`Transaction`/`Review`/`Favorite`/`SavedSearch` 에 `tenant_id` FK** 가 부착되며 생성 시 부모 엔티티(매물 또는 사용자)의 tenant 를 자동 상속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` |
+| 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property`/`Transaction`/`Review`/`Favorite`/`SavedSearch` 에 `tenant_id` FK** + Hibernate `@FilterDef`/`@Filter`. 서비스 진입 시점마다 AOP 가 `tenantFilter` 를 enable 해 모든 엔티티 쿼리에 `WHERE tenant_id = ?` 를 자동 주입 — DB 레벨에서 cross-tenant 누수 차단. 생성 시 부모 엔티티의 tenant 자동 상속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` |
+| Actuator / Prometheus | `/actuator/health` (public) · `/actuator/info` (public) · `/actuator/prometheus` (ROLE_ADMIN). HTTP / Hikari / JVM 메트릭이 자동 노출되어 Grafana·Datadog 연동 가능. health probe 는 liveness/readiness 그룹 분리 |
+| Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. **V1** 베이스라인 → **V2** tenant_id 컬럼 + backfill → **V3** tenant_id NOT NULL + 인덱스. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 | OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 + 12개 컨트롤러에 `@Tag` 그룹 부여. 108개 path 자동 노출 |
 | Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 6개 스모크 시나리오 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
-| Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 
 ### 공통
 
