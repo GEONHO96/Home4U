@@ -38,6 +38,13 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
+    // ✅ Spring Boot Actuator + Micrometer Prometheus 레지스트리
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly    'io.micrometer:micrometer-registry-prometheus'
+
+    // ✅ Spring AOP — 서비스 진입 시점마다 Hibernate tenantFilter 를 enable 한다.
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
     // ✅ JWT 관련 라이브러리 (JSON Web Token)
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "saved_searches")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class SavedSearch {
 
     @Id

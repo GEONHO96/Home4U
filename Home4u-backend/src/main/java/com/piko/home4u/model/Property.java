@@ -20,6 +20,10 @@ import java.util.List;
         getterVisibility = JsonAutoDetect.Visibility.NONE,
         isGetterVisibility = JsonAutoDetect.Visibility.NONE
 )
+@org.hibernate.annotations.FilterDef(
+        name = "tenantFilter",
+        parameters = @org.hibernate.annotations.ParamDef(name = "tenantId", type = Long.class))
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class Property {
 
     @Id

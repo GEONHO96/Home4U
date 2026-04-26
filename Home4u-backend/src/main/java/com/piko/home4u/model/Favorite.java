@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
         @UniqueConstraint(columnNames = {"user_id", "property_id"})
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class Favorite {
 
     @Id

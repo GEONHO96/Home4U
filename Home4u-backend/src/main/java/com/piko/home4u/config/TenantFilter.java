@@ -40,7 +40,8 @@ public class TenantFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "tenant suspended: " + slug);
             return;
         }
-        TenantContext.set(slug);
+        Long tenantId = tenant.map(t -> t.getId()).orElse(null);
+        TenantContext.set(slug, tenantId);
         try {
             chain.doFilter(request, response);
         } finally {

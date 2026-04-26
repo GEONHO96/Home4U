@@ -7,6 +7,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "transactions")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class Transaction {
 
     @Id

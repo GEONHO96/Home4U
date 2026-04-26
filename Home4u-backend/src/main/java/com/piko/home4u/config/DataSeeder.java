@@ -137,6 +137,8 @@ public class DataSeeder {
                 "010-0000-0000",
                 UserRole.ROLE_ADMIN
         );
+        // 멀티테넌시: 시드 admin 은 default 테넌트에 귀속
+        tenantRepo.findBySlug("default").ifPresent(admin::setTenant);
         userRepo.save(admin);
         log.info("Seeded admin account: admin / admin1234");
     }
