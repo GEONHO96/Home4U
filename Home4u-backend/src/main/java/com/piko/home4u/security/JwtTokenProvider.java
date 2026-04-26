@@ -69,14 +69,23 @@ public class JwtTokenProvider {
 
     public Authentication getAuthentication(String token) {
         String username = getUsername(token);
-        String authority = userRepository.findByUsername(username)
-                .map(User::getRole)
-                .map(Enum::name)
-                .orElse("ROLE_USER");
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new io.jsonwebtoken.JwtException(
+                        "토큰의 사용자(" + username + ") 를 찾을 수 없습니다."));
+
+        // 멀티테넌시: 토큰의 사용자 tenant 가 현재 요청 tenant 와 일치해야 한다.
+        // (Hibernate @Filter 가 derived 메서드에 항상 적용되지 않을 수 있어 명시 비교)
+        Long ctxTenantId = com.piko.home4u.config.TenantContext.currentTenantId();
+        Long userTenantId = user.getTenant() != null ? user.getTenant().getId() : null;
+        if (ctxTenantId != null && userTenantId != null && !ctxTenantId.equals(userTenantId)) {
+            throw new io.jsonwebtoken.JwtException(
+                    "토큰의 테넌트(" + userTenantId + ")가 요청 테넌트(" + ctxTenantId + ")와 다릅니다.");
+        }
+
         return new UsernamePasswordAuthenticationToken(
                 username,
                 "",
-                Collections.singletonList(new SimpleGrantedAuthority(authority))
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
         );
     }
 }

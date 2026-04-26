@@ -29,7 +29,12 @@ public class TenantHibernateFilterActivator {
     @PersistenceContext
     private EntityManager em;
 
-    @Around("execution(* com.piko.home4u.service..*(..))")
+    /**
+     * 서비스 + 보안(JWT/UserDetails) 진입점을 모두 감싸 Hibernate filter 를 활성화한다.
+     * - service..* : 일반 비즈니스 로직 — 매물/거래/리뷰 등
+     * - security..* : JWT 검증·UserDetails 조회 (cross-tenant 토큰 사용 차단)
+     */
+    @Around("execution(* com.piko.home4u.service..*(..)) || execution(* com.piko.home4u.security..*(..))")
     public Object enableTenantFilter(ProceedingJoinPoint pjp) throws Throwable {
         Long tenantId = TenantContext.currentTenantId();
         if (tenantId == null) {
@@ -39,8 +44,9 @@ public class TenantHibernateFilterActivator {
             Session session = em.unwrap(Session.class);
             Filter f = session.enableFilter(FILTER_NAME);
             f.setParameter("tenantId", tenantId);
+            log.debug("[tenant-filter] activated tenantId={} for {}", tenantId, pjp.getSignature().toShortString());
         } catch (Exception ex) {
-            log.warn("[tenant-filter] activation failed: {}", ex.getMessage());
+            log.warn("[tenant-filter] activation failed at {}: {}", pjp.getSignature().toShortString(), ex.getMessage());
         }
         return pjp.proceed();
     }
