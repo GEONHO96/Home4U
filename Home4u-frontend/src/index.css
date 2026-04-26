@@ -16,11 +16,11 @@
   --color-border-strong: #d1d6db;
 
   --color-text: #111418;
-  --color-text-muted: #586069;
-  --color-text-subtle: #8b95a1;
+  --color-text-muted: #4a5563;     /* WCAG AA 4.5:1 (on #fff) */
+  --color-text-subtle: #6b7585;    /* WCAG AA 4.5:1 (on #fff) */
 
-  --color-accent: #1673ff;        /* 직방 Primary Blue */
-  --color-accent-hover: #0e5fe3;
+  --color-accent: #0e5fe3;        /* WCAG AA 통과를 위해 #1673ff → #0e5fe3 (4.7:1 on white) */
+  --color-accent-hover: #0a4dbb;
   --color-accent-soft: #e6f0ff;
   --color-accent-contrast: #ffffff;
 
@@ -289,6 +289,13 @@ fieldset legend {
 .muted { color: var(--color-text-muted); }
 .subtle { color: var(--color-text-subtle); }
 .mono { font-family: var(--font-mono); }
+
+/* WCAG: 텍스트 블록 안의 링크는 색상 외에도 시각적 단서(밑줄)를 제공해야 한다. */
+p a, .muted a, .subtle a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
 
 .divider {
   display: flex;
