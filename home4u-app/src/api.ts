@@ -153,6 +153,76 @@ export async function registerPushToken(userId: number, token: string, platform:
   await api.post('/push/register', { token, platform }, { params: { userId } });
 }
 
+// ---- Transactions / Payments ----
+
+export interface Transaction {
+  id: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+  property?: { id: number; title: string; price: number };
+  buyer?: { id: number; username: string };
+  seller?: { id: number; username: string };
+  date?: string | null;
+}
+
+export async function getMyTransactionsAsBuyer(buyerId: number): Promise<Transaction[]> {
+  const res = await api.get<Transaction[]>(`/transactions/buyer/${buyerId}`);
+  return res.data;
+}
+
+export async function createPaymentIntent(transactionId: number) {
+  const res = await api.post<{ id: number; amount: number; providerOrderId: string; status: string }>(
+    '/payments', null, { params: { transactionId } },
+  );
+  return res.data;
+}
+
+export async function confirmPayment(paymentId: number, paymentKey?: string) {
+  const res = await api.post<{ id: number; status: string }>(
+    `/payments/${paymentId}/confirm`, { paymentKey },
+  );
+  return res.data;
+}
+
+// ---- Chat ----
+
+export interface ChatRoom {
+  id: number;
+  buyer?: { id: number; username: string };
+  seller?: { id: number; username: string };
+  property?: { id: number; title: string };
+  lastMessageAt?: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  sender?: { id: number; username: string };
+  content: string;
+  createdAt: string;
+  readAt?: string | null;
+}
+
+export async function listChatRooms(userId: number): Promise<ChatRoom[]> {
+  const res = await api.get<ChatRoom[]>('/chats', { params: { userId } });
+  return res.data;
+}
+
+export async function listChatMessages(roomId: number): Promise<ChatMessage[]> {
+  const res = await api.get<ChatMessage[]>(`/chats/${roomId}/messages`);
+  return res.data;
+}
+
+export async function sendChatMessage(roomId: number, userId: number, content: string) {
+  const res = await api.post<ChatMessage>(`/chats/${roomId}/messages`, { content }, { params: { userId } });
+  return res.data;
+}
+
+export async function openChatRoom(buyerId: number, args: { sellerId?: number; propertyId?: number }) {
+  const res = await api.post<ChatRoom>('/chats', null, {
+    params: { buyerId, sellerId: args.sellerId, propertyId: args.propertyId },
+  });
+  return res.data;
+}
+
 export function formatPriceHuman(price: number): string {
   if (price >= 10000) {
     const eok = price / 10000;
