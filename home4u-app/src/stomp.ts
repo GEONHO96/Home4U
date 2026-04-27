@@ -10,6 +10,8 @@ export interface StompChatHandler {
   onMessage: (raw: unknown) => void;
   onConnected?: () => void;
   onError?: (err: string) => void;
+  /** 서버가 /user/queue/chat-errors 로 보낸 publish 실패 알림. */
+  onServerError?: (msg: { type: string; message: string }) => void;
 }
 
 export interface StompChatHandle {
@@ -47,6 +49,15 @@ export function connectChat(roomId: number, handler: StompChatHandler): StompCha
       client.subscribe(`/topic/chats.${roomId}`, (msg: IMessage) => {
         try {
           handler.onMessage(JSON.parse(msg.body));
+        } catch {
+          // ignore non-JSON
+        }
+      });
+      // 서버 측 publish 예외를 발신자에게 돌려보내는 user destination
+      client.subscribe('/user/queue/chat-errors', (msg: IMessage) => {
+        try {
+          const parsed = JSON.parse(msg.body) as { type: string; message: string };
+          handler.onServerError?.(parsed);
         } catch {
           // ignore non-JSON
         }

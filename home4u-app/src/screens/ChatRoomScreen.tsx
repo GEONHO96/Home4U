@@ -71,6 +71,11 @@ export default function ChatRoomScreen({ route }: Props) {
         setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, m]);
       },
       onError: () => fallbackToPolling(),
+      onServerError: (e) => {
+        // 서버가 거부한 publish — 사용자에게 안내 (Alert 대신 inline 토스트가 정석이지만 데모용)
+        // eslint-disable-next-line no-console
+        console.warn('[chat] server rejected publish:', e.message);
+      },
     });
     stompRef.current = handle;
 
