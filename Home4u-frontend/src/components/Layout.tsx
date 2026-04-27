@@ -15,6 +15,7 @@ function Layout() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">본문으로 건너뛰기</a>
       <header
         style={{
           borderBottom: '1px solid var(--color-border)',
@@ -104,7 +105,7 @@ function Layout() {
         </div>
       </header>
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
 
