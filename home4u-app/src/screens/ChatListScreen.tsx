@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
+import { unreadEvents } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
@@ -43,7 +45,11 @@ export default function ChatListScreen({ navigation }: Props) {
           catch { return [r.id, 0] as const; }
         }),
       );
-      setUnread(Object.fromEntries(counts));
+      const map = Object.fromEntries(counts) as Record<number, number>;
+      setUnread(map);
+      // OS 앱 아이콘 뱃지 카운트 = 모든 방의 unread 합. 권한 없으면 silent.
+      const total = Object.values(map).reduce((a, b) => a + b, 0);
+      Notifications.setBadgeCountAsync(total).catch(() => { /* iOS 권한 / Android 미지원 무시 */ });
     } finally {
       setLoading(false);
     }
@@ -52,7 +58,19 @@ export default function ChatListScreen({ navigation }: Props) {
   useEffect(() => {
     load();
     const id = setInterval(load, 15_000); // 15s 폴링
-    return () => clearInterval(id);
+    // ChatRoomScreen 이 markRead 후 즉시 unread sync 를 요청하면 즉시 반영
+    const off = unreadEvents.subscribe((roomId) => {
+      setUnread((prev) => {
+        const next = { ...prev, [roomId]: 0 };
+        const total = Object.values(next).reduce((a, b) => a + b, 0);
+        Notifications.setBadgeCountAsync(total).catch(() => { /* noop */ });
+        return next;
+      });
+    });
+    return () => {
+      clearInterval(id);
+      off();
+    };
   }, [load]);
 
   if (!userId) {

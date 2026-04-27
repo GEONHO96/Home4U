@@ -14,6 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, listChatMessages, markRead, sendChatMessage, type ChatMessage } from '../api';
 import { connectChat } from '../stomp';
+import { unreadEvents } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
 
@@ -46,7 +47,9 @@ export default function ChatRoomScreen({ route }: Props) {
   // 화면 진입 시 미읽음 → 읽음 처리. 새 메시지 도착 후에도 다시 마크 (브로드캐스트 후 자동 호출 X).
   useEffect(() => {
     if (!userId) return;
-    markRead(roomId, userId).catch(() => { /* 네트워크 실패는 무시 */ });
+    markRead(roomId, userId)
+      .then(() => unreadEvents.emit(roomId)) // ChatList 즉시 unread=0 동기화
+      .catch(() => { /* 네트워크 실패는 무시 */ });
   }, [roomId, userId, messages.length]);
 
   // STOMP 우선 — 실패 시 폴링으로 자동 전환.
