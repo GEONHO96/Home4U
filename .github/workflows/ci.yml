@@ -213,9 +213,22 @@ jobs:
           node -e "
             const r = require(process.env.LHR);
             const c = r.categories;
-            const s = (k) => Math.round((c[k]?.score ?? 0) * 100);
-            const out = 'Lighthouse · perf ' + s('performance') + ' · a11y ' + s('accessibility') + ' · bp ' + s('best-practices') + ' · seo ' + s('seo');
-            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'summary=' + out + '\n');
+            // lighthouserc.json 의 임계값과 동기화
+            const TH = { performance: 0.70, accessibility: 0.90, 'best-practices': 0.85, seo: 0.80 };
+            const LABEL = { performance: 'perf', accessibility: 'a11y', 'best-practices': 'bp', seo: 'seo' };
+            const parts = [];
+            const fails = [];
+            for (const k of Object.keys(TH)) {
+              const score = c[k]?.score ?? 0;
+              const pct = Math.round(score * 100);
+              const ok = score >= TH[k];
+              parts.push((ok ? '✅' : '🚨') + ' ' + LABEL[k] + ' ' + pct);
+              if (!ok) fails.push(LABEL[k] + ' ' + pct + ' < ' + Math.round(TH[k] * 100));
+            }
+            const head = fails.length === 0 ? '🟢 Lighthouse OK' : '🔴 Lighthouse FAIL — ' + fails.join(', ');
+            const summary = head + ' · ' + parts.join(' · ');
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'summary=' + summary + '\n');
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'failed=' + (fails.length > 0 ? '1' : '0') + '\n');
           "
 
       - name: Notify Slack/Discord (optional)
