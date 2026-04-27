@@ -20,7 +20,9 @@
     "react-native-screens": "~4.4.0",
     "axios": "^1.7.0",
     "expo-notifications": "~0.29.10",
-    "expo-device": "~7.0.1"
+    "expo-device": "~7.0.1",
+    "@stomp/stompjs": "^7.3.0",
+    "text-encoding": "^0.7.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
