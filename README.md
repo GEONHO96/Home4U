@@ -139,18 +139,18 @@
 | 시드 계정 | dev 프로파일에서 `admin / admin1234` 자동 생성 |
 | 신고 큐 관리 | `/admin?tab=reports` — `/admin/reports` 호출, PENDING 항목을 `처리완료(RESOLVED)` 또는 `기각(DISMISSED)` 으로 1-클릭 전이 |
 | 운영 대시보드 | 요약 탭에 recharts 라인/바/파이 차트 — 14일 매물 등록·거래 추이 + 가격대 분포 |
-| 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지) |
+| 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지). **ShedLock** (jdbc-template provider) 로 멀티 인스턴스에서 잡이 한 번만 실행. dev 부팅 시 자동 스키마 + mysql Flyway V4 동일 |
 | 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property`/`Transaction`/`Review`/`Favorite`/`SavedSearch` 에 `tenant_id` FK** + Hibernate `@FilterDef`/`@Filter`. 서비스 진입 시점마다 AOP 가 `tenantFilter` 를 enable 해 모든 엔티티 쿼리에 `WHERE tenant_id = ?` 를 자동 주입 — DB 레벨에서 cross-tenant 누수 차단. 생성 시 부모 엔티티의 tenant 자동 상속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` |
 | Actuator / Prometheus / OTel | `/actuator/health` (public) · `/actuator/info` (public) · `/actuator/prometheus` (ROLE_ADMIN). HTTP / Hikari / JVM 메트릭이 자동 노출되어 Grafana·Datadog 연동 가능. `OTEL_EXPORTER_OTLP_ENDPOINT` 설정 시 micrometer-tracing-bridge-otel 로 trace 송출 |
 | Sentry | 백엔드: `SENTRY_DSN` ENV 로 활성. 프론트: `VITE_SENTRY_DSN`. 미설정 시 silent no-op. main.tsx 에 `Sentry.ErrorBoundary` 가 런타임 에러 fallback UI 노출 |
-| a11y · WCAG 2.0 AA | `e2e/a11y.e2e.ts` 에서 `@axe-core/playwright` 가 `wcag2a + wcag2aa` 룰로 critical/serious 위반 0건 강제. 색상 토큰을 4.5:1 이상으로 보정 (`--color-text-muted` `--color-text-subtle` `--color-accent`), 텍스트 블록 inline 링크에 underline 강제 |
-| 모바일 앱 | Expo (Login/PropertyList/Detail/Favorites/Transactions/ChatList/ChatRoom). 거래/결제 흐름과 **STOMP 실시간 채팅** (실패 시 5초 폴링 자동 fallback). expo-notifications 로 Expo Push 토큰 등록 + 알림 탭 → ChatRoom/Transactions 자동 라우팅 |
+| a11y · WCAG 2.0 AA | `e2e/a11y.e2e.ts` 에서 `@axe-core/playwright` 가 `wcag2a + wcag2aa` 룰로 critical/serious 위반 0건 강제. 색상 토큰을 4.5:1 이상으로 보정, 텍스트 블록 inline 링크에 underline. **헤더 위 "본문으로 건너뛰기" skip-link** + `<main tabIndex={-1}>` jump-target 으로 WCAG 2.4.1 (Bypass Blocks) 충족 |
+| 모바일 앱 | Expo (Login/PropertyList/Detail/Favorites/Transactions/ChatList/ChatRoom). 거래/결제 흐름과 **양방향 STOMP 실시간 채팅** (publish + subscribe, 실패 시 5초 폴링 fallback) + **읽음 영수증 + unread 뱃지**. expo-notifications 로 Expo Push 토큰 등록 + 알림 탭 → ChatRoom/Transactions 자동 라우팅 |
 | Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. **V1** 베이스라인 → **V2** tenant_id 컬럼 + backfill → **V3** tenant_id NOT NULL + 인덱스. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 | OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 + 12개 컨트롤러에 `@Tag` 그룹 부여. 108개 path 자동 노출 |
 | Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 9개 스모크 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED + a11y 3건). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
 | Testcontainers IT | `FlywayMigrationIT` (Docker 필요) — mysql:8.0.36 컨테이너에서 V1∼V3 마이그레이션 실주행 + tenant_id NOT NULL + `idx_*_tenant` 인덱스 검증. CI 에 별도 `integration` 잡 (`RUN_INTEGRATION=true`) |
 | Lighthouse CI | `lighthouserc.json` 기반 임계값 — performance ≥ 0.7 / a11y ≥ 0.9 / best-practices ≥ 0.85 / seo ≥ 0.8. CI 에 별도 `lighthouse` 잡으로 PR 단위 점수 추적 |
-| Sentry sourcemap | `@sentry/vite-plugin` 이 production build 시 `SENTRY_AUTH_TOKEN`/`ORG`/`PROJECT`/`RELEASE` ENV 로 자동 업로드. 업로드 후 `dist/**/*.map` 삭제로 브라우저 노출 방지. 토큰 미설정 시 silent |
+| Sentry sourcemap | `@sentry/vite-plugin` 이 production build 시 `SENTRY_AUTH_TOKEN`/`ORG`/`PROJECT`/`RELEASE` ENV 로 자동 업로드. 업로드 후 `dist/**/*.map` 삭제로 브라우저 노출 방지. 토큰 미설정 시 silent. **CI 가 `SENTRY_RELEASE=${{ github.sha }}` + `VITE_SENTRY_RELEASE` 동시 inject** 해 sourcemap ↔ 런타임 이벤트가 같은 release 키로 매칭 |
 
 ### 공통
 
