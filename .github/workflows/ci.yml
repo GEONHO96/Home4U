@@ -189,6 +189,23 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Save current scores to .lighthouseci-current
+        if: always()
+        run: |
+          # 비교 추세를 위해 현재 빌드 점수를 임시 디렉토리에 보관 (artifact 로 끌어쓸 수도 있음)
+          mkdir -p .lighthouseci-current
+        shell: bash
+
+      - name: Fetch base branch scores (artifact 기반 추세)
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          branch: ${{ github.event.pull_request.base.ref }}
+          name: lighthouse-report
+          path: .lighthouseci-base
+        continue-on-error: true
+
       - name: Run Lighthouse CI
         id: lhci
         run: npx --yes @lhci/cli@0.14.x autorun --config=./lighthouserc.json
@@ -210,23 +227,40 @@ jobs:
             exit 0
           fi
           export LHR="$LATEST"
+          # base 브랜치 점수가 있으면 추세(diff) 표시
+          BASE_LHR=""
+          if [ -d "../.lighthouseci-base" ]; then
+            B=$(ls -1 ../.lighthouseci-base/lhr-*.json 2>/dev/null | tail -1 || true)
+            [ -n "$B" ] && BASE_LHR="$B"
+          fi
+          export BASE_LHR
           node -e "
             const r = require(process.env.LHR);
+            const base = process.env.BASE_LHR ? require(process.env.BASE_LHR) : null;
             const c = r.categories;
-            // lighthouserc.json 의 임계값과 동기화
+            const bc = base?.categories;
             const TH = { performance: 0.70, accessibility: 0.90, 'best-practices': 0.85, seo: 0.80 };
             const LABEL = { performance: 'perf', accessibility: 'a11y', 'best-practices': 'bp', seo: 'seo' };
+            const trend = (cur, prev) => {
+              if (prev == null) return '';
+              const d = Math.round(cur * 100) - Math.round(prev * 100);
+              if (d > 0) return ' ▲' + d;
+              if (d < 0) return ' ▼' + Math.abs(d);
+              return ' =';
+            };
             const parts = [];
             const fails = [];
             for (const k of Object.keys(TH)) {
               const score = c[k]?.score ?? 0;
+              const prev = bc ? bc[k]?.score : null;
               const pct = Math.round(score * 100);
               const ok = score >= TH[k];
-              parts.push((ok ? '✅' : '🚨') + ' ' + LABEL[k] + ' ' + pct);
+              parts.push((ok ? '✅' : '🚨') + ' ' + LABEL[k] + ' ' + pct + trend(score, prev));
               if (!ok) fails.push(LABEL[k] + ' ' + pct + ' < ' + Math.round(TH[k] * 100));
             }
             const head = fails.length === 0 ? '🟢 Lighthouse OK' : '🔴 Lighthouse FAIL — ' + fails.join(', ');
-            const summary = head + ' · ' + parts.join(' · ');
+            const baseTag = bc ? ' (vs base)' : '';
+            const summary = head + baseTag + ' · ' + parts.join(' · ');
             require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'summary=' + summary + '\n');
             require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'failed=' + (fails.length > 0 ? '1' : '0') + '\n');
           "
