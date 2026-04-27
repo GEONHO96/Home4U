@@ -72,4 +72,71 @@ test.describe('a11y · WCAG 2.0 A/AA', () => {
       expect(focusedId).toBe('main-content');
     });
   }
+
+  /**
+   * 인증된 시나리오: 매물 상세 같은 로그인 후 페이지에서도 skip-link 가 동일하게 동작해야 한다.
+   * REST 로 buyer 시드 + realtor 시드 + 매물 1건 보장 후 buyer 토큰을 주입하고 진입.
+   */
+  test('인증된 매물 상세 페이지의 skip-link 도 동일하게 main 에 포커스', async ({ page, context }) => {
+    await fetch('http://localhost:8080/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'a11y_buyer', password: 'pw1234', email: 'a11y_buyer@x.com', phone: '010-a11y', role: 'ROLE_USER' }),
+    });
+    const buyerLogin = await fetch('http://localhost:8080/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'a11y_buyer', password: 'pw1234' }),
+    });
+    const session = await buyerLogin.json() as { token: string; userId: number; username: string; role: string };
+
+    await fetch('http://localhost:8080/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'a11y_realtor', password: 'pw1234', email: 'a11y_realtor@x.com', phone: '010-r', role: 'ROLE_REALTOR' }),
+    });
+    const realtorLogin = await fetch('http://localhost:8080/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'a11y_realtor', password: 'pw1234' }),
+    });
+    const realtor = await realtorLogin.json() as { token: string; userId: number };
+    let list = (await (await fetch(`http://localhost:8080/users/${realtor.userId}/properties`, {
+      headers: { Authorization: 'Bearer ' + realtor.token },
+    })).json()) as { id: number }[];
+    if (list.length === 0) {
+      await fetch(`http://localhost:8080/properties?ownerId=${realtor.userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + realtor.token },
+        body: JSON.stringify({
+          title: 'a11y skip-link 검증 매물', description: 'e2e', price: 30000,
+          propertyType: 'APARTMENT', transactionType: 'SALE',
+          address: '서울 a11y동', latitude: 37.5, longitude: 127.0,
+          dong: 'a11y', gungu: 'a11y구', floor: 1, minArea: 10, maxArea: 20,
+        }),
+      });
+      list = (await (await fetch(`http://localhost:8080/users/${realtor.userId}/properties`, {
+        headers: { Authorization: 'Bearer ' + realtor.token },
+      })).json()) as { id: number }[];
+    }
+    const propertyId = list[0].id;
+
+    await context.addInitScript((s: typeof session) => {
+      localStorage.setItem('token', s.token);
+      localStorage.setItem('userId', String(s.userId));
+      localStorage.setItem('username', s.username);
+      localStorage.setItem('role', s.role);
+    }, session);
+
+    await page.goto(`/properties/${propertyId}`);
+    await page.waitForLoadState('networkidle');
+
+    await page.keyboard.press('Tab');
+    const focusedText = await page.evaluate(() => document.activeElement?.textContent?.trim() ?? '');
+    expect(focusedText).toBe('본문으로 건너뛰기');
+
+    await page.keyboard.press('Enter');
+    const focusedId = await page.evaluate(() => document.activeElement?.id ?? '');
+    expect(focusedId).toBe('main-content');
+  });
 });
