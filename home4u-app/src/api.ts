@@ -26,6 +26,9 @@ let cachedToken: string | null = null;
 export function setToken(token: string | null) {
   cachedToken = token;
 }
+export function getSessionToken(): string | null {
+  return cachedToken;
+}
 api.interceptors.request.use((config) => {
   if (cachedToken) {
     config.headers.Authorization = `Bearer ${cachedToken}`;

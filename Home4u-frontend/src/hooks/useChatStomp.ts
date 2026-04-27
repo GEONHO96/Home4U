@@ -14,11 +14,14 @@ export function useChatStomp(roomId: number | null, onMessage: (msg: ChatMessage
 
   useEffect(() => {
     if (!roomId) return;
+    // 백엔드 StompJwtChannelInterceptor 가 CONNECT 단계에서 JWT 를 검증하므로 토큰을 함께 보낸다.
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const client = new Client({
       brokerURL: WS_URL,
       reconnectDelay: 4000,
       heartbeatIncoming: 20000,
       heartbeatOutgoing: 20000,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
     client.onConnect = () => {

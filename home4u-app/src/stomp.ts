@@ -4,7 +4,7 @@
 import 'text-encoding';
 
 import { Client, type IFrame, type IMessage } from '@stomp/stompjs';
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, getSessionToken } from './api';
 
 export interface StompChatHandler {
   onMessage: (raw: unknown) => void;
@@ -30,11 +30,14 @@ export function connectChat(roomId: number, handler: StompChatHandler): StompCha
 
   let active = true;
   let connected = false;
+  const token = getSessionToken();
   const client = new Client({
     brokerURL: wsUrl,
     reconnectDelay: 5000,
     heartbeatIncoming: 10_000,
     heartbeatOutgoing: 10_000,
+    // STOMP CONNECT 시 JWT 헤더 — 백엔드 StompJwtChannelInterceptor 가 검증
+    connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
     onConnect: () => {
       if (!active) return;
       connected = true;
