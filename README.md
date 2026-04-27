@@ -141,10 +141,14 @@
 | 운영 대시보드 | 요약 탭에 recharts 라인/바/파이 차트 — 14일 매물 등록·거래 추이 + 가격대 분포 |
 | 비동기 워커 | `@EnableScheduling` 으로 1분 heartbeat + 5분 주기 저장된 검색 매칭 → 사용자에게 푸시 (`lastNotifiedAt` 으로 중복 방지) |
 | 멀티테넌시 | `X-Tenant-Slug` 헤더 → `TenantFilter` 가 `TenantContext` 에 세팅. **`User`/`Property`/`Transaction`/`Review`/`Favorite`/`SavedSearch` 에 `tenant_id` FK** + Hibernate `@FilterDef`/`@Filter`. 서비스 진입 시점마다 AOP 가 `tenantFilter` 를 enable 해 모든 엔티티 쿼리에 `WHERE tenant_id = ?` 를 자동 주입 — DB 레벨에서 cross-tenant 누수 차단. 생성 시 부모 엔티티의 tenant 자동 상속, legacy 행은 default 로 backfill. dev 시드: `default`, `demo-realty` |
-| Actuator / Prometheus | `/actuator/health` (public) · `/actuator/info` (public) · `/actuator/prometheus` (ROLE_ADMIN). HTTP / Hikari / JVM 메트릭이 자동 노출되어 Grafana·Datadog 연동 가능. health probe 는 liveness/readiness 그룹 분리 |
+| Actuator / Prometheus / OTel | `/actuator/health` (public) · `/actuator/info` (public) · `/actuator/prometheus` (ROLE_ADMIN). HTTP / Hikari / JVM 메트릭이 자동 노출되어 Grafana·Datadog 연동 가능. `OTEL_EXPORTER_OTLP_ENDPOINT` 설정 시 micrometer-tracing-bridge-otel 로 trace 송출 |
+| Sentry | 백엔드: `SENTRY_DSN` ENV 로 활성. 프론트: `VITE_SENTRY_DSN`. 미설정 시 silent no-op. main.tsx 에 `Sentry.ErrorBoundary` 가 런타임 에러 fallback UI 노출 |
+| a11y · WCAG 2.0 AA | `e2e/a11y.e2e.ts` 에서 `@axe-core/playwright` 가 `wcag2a + wcag2aa` 룰로 critical/serious 위반 0건 강제. 색상 토큰을 4.5:1 이상으로 보정 (`--color-text-muted` `--color-text-subtle` `--color-accent`), 텍스트 블록 inline 링크에 underline 강제 |
+| 모바일 앱 | Expo (Login/PropertyList/Detail/Favorites/Transactions/ChatList/ChatRoom). 거래/결제 흐름과 5초 폴링 채팅 구현, expo-notifications 로 Expo Push 토큰 등록 |
 | Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. **V1** 베이스라인 → **V2** tenant_id 컬럼 + backfill → **V3** tenant_id NOT NULL + 인덱스. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 | OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 + 12개 컨트롤러에 `@Tag` 그룹 부여. 108개 path 자동 노출 |
-| Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 6개 스모크 시나리오 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
+| Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 9개 스모크 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED + a11y 3건). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
+| Testcontainers IT | `FlywayMigrationIT` (Docker 필요) — mysql:8.0.36 컨테이너에서 V1∼V3 마이그레이션 실주행 + tenant_id NOT NULL + `idx_*_tenant` 인덱스 검증. CI 에 별도 `integration` 잡 (`RUN_INTEGRATION=true`) |
 
 ### 공통
 
