@@ -8,20 +8,28 @@ import { API_BASE_URL } from './api';
 
 export interface StompChatHandler {
   onMessage: (raw: unknown) => void;
+  onConnected?: () => void;
   onError?: (err: string) => void;
+}
+
+export interface StompChatHandle {
+  /** publish 가 가능하면 true. REST fallback 결정용. */
+  publish(userId: number, content: string): boolean;
+  close(): void;
 }
 
 /**
  * 모바일용 STOMP 클라이언트 — /ws-chat/websocket 직결 (SockJS 폴백 X).
- * 백엔드는 /ws-chat 으로 SockJS 와 raw WebSocket 모두 노출하므로 RN 에서는 raw 가 깔끔.
  *
- * roomId 의 /topic/chats.{roomId} 를 구독하고 새 메시지를 콜백으로 흘려보낸다.
- * 연결 실패 시 onError 를 호출하고 호출 측이 폴링으로 fallback 하도록 한다.
+ * 구독: /topic/chats.{roomId}
+ * Publish: /app/chat/{roomId}/send  → ChatStompController 가 저장 + broadcast
+ * 연결 실패 시 onError 가 호출되며 호출 측은 폴링/REST fallback 으로 전환할 수 있다.
  */
-export function connectChat(roomId: number, handler: StompChatHandler): () => void {
+export function connectChat(roomId: number, handler: StompChatHandler): StompChatHandle {
   const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws-chat/websocket';
 
   let active = true;
+  let connected = false;
   const client = new Client({
     brokerURL: wsUrl,
     reconnectDelay: 5000,
@@ -29,6 +37,7 @@ export function connectChat(roomId: number, handler: StompChatHandler): () => vo
     heartbeatOutgoing: 10_000,
     onConnect: () => {
       if (!active) return;
+      connected = true;
       client.subscribe(`/topic/chats.${roomId}`, (msg: IMessage) => {
         try {
           handler.onMessage(JSON.parse(msg.body));
@@ -36,7 +45,9 @@ export function connectChat(roomId: number, handler: StompChatHandler): () => vo
           // ignore non-JSON
         }
       });
+      handler.onConnected?.();
     },
+    onDisconnect: () => { connected = false; },
     onStompError: (frame: IFrame) => {
       handler.onError?.(frame.headers['message'] ?? 'STOMP error');
     },
@@ -51,8 +62,22 @@ export function connectChat(roomId: number, handler: StompChatHandler): () => vo
     handler.onError?.((e as Error).message);
   }
 
-  return () => {
-    active = false;
-    try { client.deactivate(); } catch { /* ignore */ }
+  return {
+    publish(userId: number, content: string): boolean {
+      if (!connected) return false;
+      try {
+        client.publish({
+          destination: `/app/chat/${roomId}/send`,
+          body: JSON.stringify({ userId, content }),
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    close() {
+      active = false;
+      try { client.deactivate(); } catch { /* ignore */ }
+    },
   };
 }

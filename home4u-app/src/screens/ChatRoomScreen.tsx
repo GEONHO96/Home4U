@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { getSessionUserId, listChatMessages, sendChatMessage, type ChatMessage } from '../api';
+import { getSessionUserId, listChatMessages, markRead, sendChatMessage, type ChatMessage } from '../api';
 import { connectChat } from '../stomp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
@@ -43,7 +43,14 @@ export default function ChatRoomScreen({ route }: Props) {
   // 초기 1회 fetch — STOMP/폴링 공통.
   useEffect(() => { load(); }, [load]);
 
+  // 화면 진입 시 미읽음 → 읽음 처리. 새 메시지 도착 후에도 다시 마크 (브로드캐스트 후 자동 호출 X).
+  useEffect(() => {
+    if (!userId) return;
+    markRead(roomId, userId).catch(() => { /* 네트워크 실패는 무시 */ });
+  }, [roomId, userId, messages.length]);
+
   // STOMP 우선 — 실패 시 폴링으로 자동 전환.
+  const stompRef = useRef<ReturnType<typeof connectChat> | null>(null);
   useEffect(() => {
     let pollId: ReturnType<typeof setInterval> | null = null;
 
@@ -53,17 +60,20 @@ export default function ChatRoomScreen({ route }: Props) {
       pollId = setInterval(load, 5_000);
     };
 
-    const close = connectChat(roomId, {
+    const handle = connectChat(roomId, {
+      onConnected: () => setTransport('stomp'),
       onMessage: (raw) => {
         const m = raw as ChatMessage;
         setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, m]);
       },
       onError: () => fallbackToPolling(),
     });
+    stompRef.current = handle;
 
     return () => {
       if (pollId) clearInterval(pollId);
-      close();
+      stompRef.current = null;
+      handle.close();
     };
   }, [roomId, load]);
 
@@ -76,9 +86,13 @@ export default function ChatRoomScreen({ route }: Props) {
     if (!content || !userId) return;
     setSending(true);
     try {
-      await sendChatMessage(roomId, userId, content);
+      // 1) STOMP 가 연결돼 있으면 WS publish — REST round-trip 생략
+      const sentViaStomp = stompRef.current?.publish(userId, content) ?? false;
+      if (!sentViaStomp) {
+        // 2) STOMP 미연결 시 REST fallback
+        await sendChatMessage(roomId, userId, content);
+      }
       setDraft('');
-      // STOMP 가 켜져 있으면 broadcast 가 곧 도착해 자동 추가됨. 폴링 모드면 즉시 fetch.
       if (transport === 'polling') await load();
     } finally {
       setSending(false);
