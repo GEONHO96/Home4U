@@ -51,3 +51,17 @@ export async function registerBackgroundUnreadSync(): Promise<void> {
     // 시뮬레이터/개발 빌드 등 미지원 환경 — silent
   }
 }
+
+export type BgFetchState = 'available' | 'restricted' | 'denied' | 'unsupported';
+
+/** 현재 BackgroundFetch 등록 상태를 UI 가 읽기 쉬운 라벨로 반환. */
+export async function getBackgroundUnreadState(): Promise<BgFetchState> {
+  try {
+    const status = await BackgroundFetch.getStatusAsync();
+    if (status === BackgroundFetch.BackgroundFetchStatus.Restricted) return 'restricted';
+    if (status === BackgroundFetch.BackgroundFetchStatus.Denied) return 'denied';
+    return 'available';
+  } catch {
+    return 'unsupported';
+  }
+}

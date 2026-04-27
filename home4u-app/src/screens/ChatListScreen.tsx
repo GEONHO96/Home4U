@@ -11,6 +11,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
+import { getBackgroundUnreadState, type BgFetchState } from '../backgroundUnread';
 import { useUnread } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
@@ -29,8 +30,13 @@ export default function ChatListScreen({ navigation }: Props) {
   const userId = getSessionUserId();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bgState, setBgState] = useState<BgFetchState | null>(null);
   const unread = useUnread((s) => s.byRoom);
   const setManyUnread = useUnread((s) => s.setMany);
+
+  useEffect(() => {
+    getBackgroundUnreadState().then(setBgState).catch(() => setBgState('unsupported'));
+  }, []);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -67,12 +73,20 @@ export default function ChatListScreen({ navigation }: Props) {
     );
   }
 
+  const bgLabel = bgState === 'available' ? '🟢 백그라운드 동기화 ON'
+    : bgState === 'restricted' ? '🟡 저전력 모드'
+    : bgState === 'denied' ? '🔴 백그라운드 권한 없음'
+    : bgState === 'unsupported' ? '— 백그라운드 미지원' : '';
+
   return (
     <FlatList
       data={rooms}
       keyExtractor={(r) => String(r.id)}
       contentContainerStyle={rooms.length === 0 ? styles.empty : { paddingVertical: 8 }}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      ListHeaderComponent={
+        bgLabel ? <View style={styles.bgRow}><Text style={styles.bgText}>{bgLabel}</Text></View> : null
+      }
       ListEmptyComponent={loading ? <ActivityIndicator /> : <Text style={styles.emptyText}>아직 채팅이 없습니다.</Text>}
       renderItem={({ item }) => {
         const peer = item.buyer?.id === userId ? item.seller : item.buyer;
@@ -114,4 +128,6 @@ const styles = StyleSheet.create({
   time: { color: '#8b95a1', fontSize: 11 },
   unreadBadge: { backgroundColor: '#0e5fe3', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
   unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  bgRow: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: '#f7f8fa' },
+  bgText: { fontSize: 11, color: '#6b7585' },
 });
