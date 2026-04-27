@@ -190,9 +190,53 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
+        id: lhci
         run: npx --yes @lhci/cli@0.14.x autorun --config=./lighthouserc.json
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Summarize scores for webhook
+        if: always()
+        id: lhci-summary
+        run: |
+          set -e
+          if [ ! -d ".lighthouseci" ]; then
+            echo "summary=Lighthouse CI did not produce a report" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LATEST=$(ls -1 .lighthouseci/lhr-*.json 2>/dev/null | tail -1 || true)
+          if [ -z "$LATEST" ]; then
+            echo "summary=No lhr-*.json found" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          export LHR="$LATEST"
+          node -e "
+            const r = require(process.env.LHR);
+            const c = r.categories;
+            const s = (k) => Math.round((c[k]?.score ?? 0) * 100);
+            const out = 'Lighthouse · perf ' + s('performance') + ' · a11y ' + s('accessibility') + ' · bp ' + s('best-practices') + ' · seo ' + s('seo');
+            require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'summary=' + out + '\n');
+          "
+
+      - name: Notify Slack/Discord (optional)
+        if: always() && (env.SLACK_WEBHOOK_URL != '' || env.DISCORD_WEBHOOK_URL != '')
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SUMMARY: ${{ steps.lhci-summary.outputs.summary }}
+          SHA: ${{ github.sha }}
+          PR: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}
+        run: |
+          set -e
+          MSG="📊 ${SUMMARY:-(no summary)} · ${SHA:0:7} · ${PR:-no-link}"
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -fsS -X POST -H 'Content-Type: application/json' \
+              -d "{\"text\":\"${MSG}\"}" "$SLACK_WEBHOOK_URL" || true
+          fi
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            curl -fsS -X POST -H 'Content-Type: application/json' \
+              -d "{\"content\":\"${MSG}\"}" "$DISCORD_WEBHOOK_URL" || true
+          fi
 
       - name: Upload Lighthouse report
         if: always()
