@@ -17,6 +17,9 @@ dist-ssr
 /test-results/
 /playwright/.cache/
 
+# Lighthouse CI
+/.lighthouseci/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
