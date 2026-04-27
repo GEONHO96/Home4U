@@ -1,7 +1,9 @@
+import { useRef } from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, type NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { useNotificationRouting } from './src/notifications';
 import LoginScreen from './src/screens/LoginScreen';
 import PropertyListScreen from './src/screens/PropertyListScreen';
 import PropertyDetailScreen from './src/screens/PropertyDetailScreen';
@@ -23,8 +25,11 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const navRef = useRef<NavigationContainerRef<RootStackParamList> | null>(null);
+  useNotificationRouting(navRef);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navRef}>
       <StatusBar style="dark" />
       <Stack.Navigator
         initialRouteName="Login"
