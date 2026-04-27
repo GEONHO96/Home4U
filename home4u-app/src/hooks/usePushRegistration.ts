@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { registerPushToken } from '../api';
+import { registerBackgroundUnreadSync } from '../backgroundUnread';
 
 /**
  * 로그인 후 호출 — 디바이스의 ExpoPushToken 을 가져와 백엔드에 등록.
@@ -33,6 +34,8 @@ export function usePushRegistration(userId: number | null) {
         if (!cancelled && token) {
           await registerPushToken(userId, token, Platform.OS);
         }
+        // 백그라운드 unread sync 도 같이 등록 (idempotent)
+        registerBackgroundUnreadSync().catch(() => { /* unsupported environment */ });
       } catch (e) {
         // 토큰 발급 실패는 사용자에게 노출하지 않음 (네트워크/권한/시뮬레이터 등)
         // eslint-disable-next-line no-console
