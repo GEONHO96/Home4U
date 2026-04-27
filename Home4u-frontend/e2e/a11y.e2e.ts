@@ -74,62 +74,38 @@ test.describe('a11y · WCAG 2.0 A/AA', () => {
   }
 
   /**
-   * 인증된 시나리오: 매물 상세 같은 로그인 후 페이지에서도 skip-link 가 동일하게 동작해야 한다.
-   * REST 로 buyer 시드 + realtor 시드 + 매물 1건 보장 후 buyer 토큰을 주입하고 진입.
+   * 인증된 시나리오의 skip-link 검증 — 백엔드 의존 없이 mock 응답으로 격리.
+   *
+   * 핵심은 Layout 의 skip-link 가 모든 라우트에서 일관되게 작동한다는 것 — 자식 페이지의 데이터 fetch 결과와 무관하다.
+   * 백엔드 의존을 제거하기 위해 모든 /properties/* /reviews/* /favorites/* 등의 호출을 빈 응답으로 가로채고,
+   * 라우트는 임의의 비존재 propertyId 로 진입한다 (PropertyDetailPage 는 에러 메시지를 렌더하지만 Layout 자체는 마운트됨).
    */
-  test('인증된 매물 상세 페이지의 skip-link 도 동일하게 main 에 포커스', async ({ page, context }) => {
-    await fetch('http://localhost:8080/users/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'a11y_buyer', password: 'pw1234', email: 'a11y_buyer@x.com', phone: '010-a11y', role: 'ROLE_USER' }),
-    });
-    const buyerLogin = await fetch('http://localhost:8080/users/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'a11y_buyer', password: 'pw1234' }),
-    });
-    const session = await buyerLogin.json() as { token: string; userId: number; username: string; role: string };
+  test('인증된 매물 상세 페이지의 skip-link 가 main 에 포커스 (mock 격리)', async ({ page, context }) => {
+    const propertyId = 9999;
 
-    await fetch('http://localhost:8080/users/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'a11y_realtor', password: 'pw1234', email: 'a11y_realtor@x.com', phone: '010-r', role: 'ROLE_REALTOR' }),
+    // 외부 호출은 모두 빈 응답으로 가로채 e2e 가 백엔드에 의존하지 않게 한다.
+    // Layout 의 skip-link 만 집중 검증하므로 자식 페이지의 데이터 정합성은 무관.
+    await context.route('**/localhost:8080/**', async (route) => {
+      const url = route.request().url();
+      if (url.includes(`/properties/${propertyId}`)) {
+        return route.fulfill({
+          status: 404, contentType: 'application/json',
+          body: JSON.stringify({ message: 'mocked not found' }),
+        });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     });
-    const realtorLogin = await fetch('http://localhost:8080/users/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'a11y_realtor', password: 'pw1234' }),
-    });
-    const realtor = await realtorLogin.json() as { token: string; userId: number };
-    let list = (await (await fetch(`http://localhost:8080/users/${realtor.userId}/properties`, {
-      headers: { Authorization: 'Bearer ' + realtor.token },
-    })).json()) as { id: number }[];
-    if (list.length === 0) {
-      await fetch(`http://localhost:8080/properties?ownerId=${realtor.userId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + realtor.token },
-        body: JSON.stringify({
-          title: 'a11y skip-link 검증 매물', description: 'e2e', price: 30000,
-          propertyType: 'APARTMENT', transactionType: 'SALE',
-          address: '서울 a11y동', latitude: 37.5, longitude: 127.0,
-          dong: 'a11y', gungu: 'a11y구', floor: 1, minArea: 10, maxArea: 20,
-        }),
-      });
-      list = (await (await fetch(`http://localhost:8080/users/${realtor.userId}/properties`, {
-        headers: { Authorization: 'Bearer ' + realtor.token },
-      })).json()) as { id: number }[];
-    }
-    const propertyId = list[0].id;
 
-    await context.addInitScript((s: typeof session) => {
-      localStorage.setItem('token', s.token);
-      localStorage.setItem('userId', String(s.userId));
-      localStorage.setItem('username', s.username);
-      localStorage.setItem('role', s.role);
-    }, session);
+    await context.addInitScript(() => {
+      localStorage.setItem('token', 'mock-jwt');
+      localStorage.setItem('userId', '2');
+      localStorage.setItem('username', 'a11y_mock_buyer');
+      localStorage.setItem('role', 'ROLE_USER');
+    });
 
     await page.goto(`/properties/${propertyId}`);
-    await page.waitForLoadState('networkidle');
+    // Layout 은 항상 마운트되므로 skip-link 가 DOM 에 붙는다 — 자식 페이지의 데이터 결과와 무관.
+    await expect(page.locator('a.skip-link')).toBeAttached({ timeout: 10_000 });
 
     await page.keyboard.press('Tab');
     const focusedText = await page.evaluate(() => document.activeElement?.textContent?.trim() ?? '');
