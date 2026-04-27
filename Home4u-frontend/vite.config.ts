@@ -1,11 +1,26 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import { VitePWA } from 'vite-plugin-pwa';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    // Sentry sourcemap 업로드를 위해 dist 에 같이 출력 — 업로드 후 별도 단계에서 제거
+    sourcemap: true,
+  },
   plugins: [
     react(),
+    // Sentry sourcemap 업로드 — SENTRY_AUTH_TOKEN 미설정이면 silently no-op
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: { name: process.env.SENTRY_RELEASE },
+      sourcemaps: { assets: ['./dist/**'], filesToDeleteAfterUpload: './dist/**/*.map' },
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
