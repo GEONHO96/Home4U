@@ -13,8 +13,11 @@ export interface StompChatHandler {
 }
 
 export interface StompChatHandle {
-  /** publish 가 가능하면 true. REST fallback 결정용. */
-  publish(userId: number, content: string): boolean;
+  /**
+   * publish 가 가능하면 true. REST fallback 결정용.
+   * 서버는 STOMP CONNECT 의 JWT 로 sender 를 식별하므로 payload 에 userId 를 포함하지 않는다.
+   */
+  publish(content: string): boolean;
   close(): void;
 }
 
@@ -66,12 +69,12 @@ export function connectChat(roomId: number, handler: StompChatHandler): StompCha
   }
 
   return {
-    publish(userId: number, content: string): boolean {
+    publish(content: string): boolean {
       if (!connected) return false;
       try {
         client.publish({
           destination: `/app/chat/${roomId}/send`,
-          body: JSON.stringify({ userId, content }),
+          body: JSON.stringify({ content }),
         });
         return true;
       } catch {

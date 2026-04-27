@@ -14,7 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, listChatMessages, markRead, sendChatMessage, type ChatMessage } from '../api';
 import { connectChat } from '../stomp';
-import { unreadEvents } from '../unreadStore';
+import { useUnread } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
 
@@ -45,12 +45,13 @@ export default function ChatRoomScreen({ route }: Props) {
   useEffect(() => { load(); }, [load]);
 
   // 화면 진입 시 미읽음 → 읽음 처리. 새 메시지 도착 후에도 다시 마크 (브로드캐스트 후 자동 호출 X).
+  const markReadStore = useUnread((s) => s.markRead);
   useEffect(() => {
     if (!userId) return;
     markRead(roomId, userId)
-      .then(() => unreadEvents.emit(roomId)) // ChatList 즉시 unread=0 동기화
+      .then(() => markReadStore(roomId)) // zustand store → ChatList unread 즉시 0 + OS 뱃지 sync
       .catch(() => { /* 네트워크 실패는 무시 */ });
-  }, [roomId, userId, messages.length]);
+  }, [roomId, userId, messages.length, markReadStore]);
 
   // STOMP 우선 — 실패 시 폴링으로 자동 전환.
   const stompRef = useRef<ReturnType<typeof connectChat> | null>(null);
@@ -89,8 +90,8 @@ export default function ChatRoomScreen({ route }: Props) {
     if (!content || !userId) return;
     setSending(true);
     try {
-      // 1) STOMP 가 연결돼 있으면 WS publish — REST round-trip 생략
-      const sentViaStomp = stompRef.current?.publish(userId, content) ?? false;
+      // 1) STOMP 가 연결돼 있으면 WS publish — sender 는 JWT 로 식별, payload 에 userId 불필요
+      const sentViaStomp = stompRef.current?.publish(content) ?? false;
       if (!sentViaStomp) {
         // 2) STOMP 미연결 시 REST fallback
         await sendChatMessage(roomId, userId, content);

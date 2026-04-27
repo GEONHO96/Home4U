@@ -1,6 +1,7 @@
 package com.piko.home4u.controller;
 
 import com.piko.home4u.service.ChatService;
+import com.piko.home4u.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -8,15 +9,18 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
 
+import java.security.Principal;
 import java.util.Map;
 
 /**
  * STOMP 기반 채팅 publish 엔드포인트.
- * 클라이언트가 /app/chat/{roomId}/send 로 메시지를 publish 하면 ChatService 가
- * 저장 + /topic/chats.{roomId} 로 broadcast 한다 — REST 한 번 더 호출하는 round-trip 절약.
  *
- * STOMP CONNECT 시 인증 정보(헤더의 Authorization)는 별도 인터셉터가 필요해
- * 현재는 payload 의 userId 를 신뢰하는 형태 — 운영 단계에서는 SecurityContext 연동 필요.
+ * 흐름:
+ *   1) StompJwtChannelInterceptor 가 CONNECT 단계에서 JWT 를 검증하고 StompHeaderAccessor.user 를 설정
+ *   2) Spring 이 @MessageMapping 핸들러에 java.security.Principal 인자로 동일 객체를 주입
+ *   3) Principal.getName() = JWT 의 username → UserService.getUserByUsername 으로 신뢰 가능한 userId 획득
+ *
+ * payload 의 userId 는 더 이상 신뢰하지 않는다 — 클라이언트가 위조해도 실제 발신자는 토큰 소유자로 강제됨.
  */
 @Slf4j
 @Controller
@@ -24,24 +28,28 @@ import java.util.Map;
 public class ChatStompController {
 
     private final ChatService chatService;
+    private final UserService userService;
 
     @MessageMapping("/chat/{roomId}/send")
-    public void send(@DestinationVariable Long roomId, @Payload Map<String, Object> body) {
-        Object rawUser = body.get("userId");
-        Object rawContent = body.get("content");
-        if (rawUser == null || rawContent == null) {
-            log.warn("[chat-stomp] missing userId/content for room={}", roomId);
+    public void send(@DestinationVariable Long roomId,
+                     @Payload Map<String, Object> body,
+                     Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            log.warn("[chat-stomp] unauthenticated CONNECT — refused (room={})", roomId);
             return;
         }
-        long userId;
-        try {
-            userId = Long.parseLong(String.valueOf(rawUser));
-        } catch (NumberFormatException ex) {
-            log.warn("[chat-stomp] invalid userId={}", rawUser);
+        Object rawContent = body == null ? null : body.get("content");
+        if (rawContent == null) {
+            log.warn("[chat-stomp] missing content for room={} user={}", roomId, principal.getName());
             return;
         }
-        String content = String.valueOf(rawContent);
-        chatService.sendMessage(roomId, userId, content);
+        var sender = userService.getUserByUsername(principal.getName())
+                .orElse(null);
+        if (sender == null || sender.getId() == null) {
+            log.warn("[chat-stomp] sender lookup miss — username={}", principal.getName());
+            return;
+        }
+        chatService.sendMessage(roomId, sender.getId(), String.valueOf(rawContent));
         // sendMessage 가 SimpMessagingTemplate 으로 자동 broadcast 하므로 추가 작업 불필요.
     }
 }
