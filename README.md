@@ -144,11 +144,13 @@
 | Actuator / Prometheus / OTel | `/actuator/health` (public) · `/actuator/info` (public) · `/actuator/prometheus` (ROLE_ADMIN). HTTP / Hikari / JVM 메트릭이 자동 노출되어 Grafana·Datadog 연동 가능. `OTEL_EXPORTER_OTLP_ENDPOINT` 설정 시 micrometer-tracing-bridge-otel 로 trace 송출 |
 | Sentry | 백엔드: `SENTRY_DSN` ENV 로 활성. 프론트: `VITE_SENTRY_DSN`. 미설정 시 silent no-op. main.tsx 에 `Sentry.ErrorBoundary` 가 런타임 에러 fallback UI 노출 |
 | a11y · WCAG 2.0 AA | `e2e/a11y.e2e.ts` 에서 `@axe-core/playwright` 가 `wcag2a + wcag2aa` 룰로 critical/serious 위반 0건 강제. 색상 토큰을 4.5:1 이상으로 보정 (`--color-text-muted` `--color-text-subtle` `--color-accent`), 텍스트 블록 inline 링크에 underline 강제 |
-| 모바일 앱 | Expo (Login/PropertyList/Detail/Favorites/Transactions/ChatList/ChatRoom). 거래/결제 흐름과 5초 폴링 채팅 구현, expo-notifications 로 Expo Push 토큰 등록 |
+| 모바일 앱 | Expo (Login/PropertyList/Detail/Favorites/Transactions/ChatList/ChatRoom). 거래/결제 흐름과 **STOMP 실시간 채팅** (실패 시 5초 폴링 자동 fallback). expo-notifications 로 Expo Push 토큰 등록 + 알림 탭 → ChatRoom/Transactions 자동 라우팅 |
 | Flyway | mysql 프로파일에서 `db/migration/V*.sql` 적용 후 JPA `ddl-auto=validate`. **V1** 베이스라인 → **V2** tenant_id 컬럼 + backfill → **V3** tenant_id NOT NULL + 인덱스. dev (H2) 는 그대로 `update` 모드로 빠르게 부팅 |
 | OpenAPI/Swagger | `springdoc-openapi-starter-webmvc-ui` — `/swagger-ui/index.html` UI + `/v3/api-docs` JSON. JWT bearer 스킴 + 12개 컨트롤러에 `@Tag` 그룹 부여. 108개 path 자동 노출 |
 | Playwright e2e | `Home4u-frontend/e2e/*.e2e.ts` 9개 스모크 (홈 / admin 차트 / 챗봇 / 찜 토글 / 신고 탭 / 거래→결제 COMPLETED + a11y 3건). CI 에 별도 `e2e` 잡으로 백엔드 백그라운드 + Vite + Chromium 가동 |
 | Testcontainers IT | `FlywayMigrationIT` (Docker 필요) — mysql:8.0.36 컨테이너에서 V1∼V3 마이그레이션 실주행 + tenant_id NOT NULL + `idx_*_tenant` 인덱스 검증. CI 에 별도 `integration` 잡 (`RUN_INTEGRATION=true`) |
+| Lighthouse CI | `lighthouserc.json` 기반 임계값 — performance ≥ 0.7 / a11y ≥ 0.9 / best-practices ≥ 0.85 / seo ≥ 0.8. CI 에 별도 `lighthouse` 잡으로 PR 단위 점수 추적 |
+| Sentry sourcemap | `@sentry/vite-plugin` 이 production build 시 `SENTRY_AUTH_TOKEN`/`ORG`/`PROJECT`/`RELEASE` ENV 로 자동 업로드. 업로드 후 `dist/**/*.map` 삭제로 브라우저 노출 방지. 토큰 미설정 시 silent |
 
 ### 공통
 
