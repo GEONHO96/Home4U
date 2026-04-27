@@ -223,6 +223,15 @@ export async function openChatRoom(buyerId: number, args: { sellerId?: number; p
   return res.data;
 }
 
+export async function getUnreadCount(roomId: number, userId: number): Promise<number> {
+  const res = await api.get<{ count: number }>(`/chats/${roomId}/unread-count`, { params: { userId } });
+  return res.data.count;
+}
+
+export async function markRead(roomId: number, userId: number): Promise<void> {
+  await api.post(`/chats/${roomId}/read`, null, { params: { userId } });
+}
+
 export function formatPriceHuman(price: number): string {
   if (price >= 10000) {
     const eok = price / 10000;

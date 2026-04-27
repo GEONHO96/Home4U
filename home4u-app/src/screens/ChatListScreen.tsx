@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
-import { getSessionUserId, listChatRooms, type ChatRoom } from '../api';
+import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
@@ -27,13 +27,23 @@ function formatTime(iso?: string): string {
 export default function ChatListScreen({ navigation }: Props) {
   const userId = getSessionUserId();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [unread, setUnread] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      setRooms(await listChatRooms(userId));
+      const list = await listChatRooms(userId);
+      setRooms(list);
+      // 각 방의 미읽음 수를 병렬로 조회 — 실패 시 0 으로 유지
+      const counts = await Promise.all(
+        list.map(async (r) => {
+          try { return [r.id, await getUnreadCount(r.id, userId)] as const; }
+          catch { return [r.id, 0] as const; }
+        }),
+      );
+      setUnread(Object.fromEntries(counts));
     } finally {
       setLoading(false);
     }
@@ -63,6 +73,7 @@ export default function ChatListScreen({ navigation }: Props) {
       ListEmptyComponent={loading ? <ActivityIndicator /> : <Text style={styles.emptyText}>아직 채팅이 없습니다.</Text>}
       renderItem={({ item }) => {
         const peer = item.buyer?.id === userId ? item.seller : item.buyer;
+        const u = unread[item.id] ?? 0;
         return (
           <TouchableOpacity
             style={styles.row}
@@ -73,7 +84,14 @@ export default function ChatListScreen({ navigation }: Props) {
               <Text style={styles.peer}>{peer?.username ?? '상대방'}</Text>
               {item.property?.title && <Text style={styles.title}>{item.property.title}</Text>}
             </View>
-            <Text style={styles.time}>{formatTime(item.lastMessageAt)}</Text>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <Text style={styles.time}>{formatTime(item.lastMessageAt)}</Text>
+              {u > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadText}>{u > 99 ? '99+' : u}</Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         );
       }}
@@ -91,4 +109,6 @@ const styles = StyleSheet.create({
   peer: { fontWeight: '700', fontSize: 15 },
   title: { color: '#586069', marginTop: 2, fontSize: 12 },
   time: { color: '#8b95a1', fontSize: 11 },
+  unreadBadge: { backgroundColor: '#0e5fe3', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
+  unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 });
