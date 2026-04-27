@@ -8,11 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
-import { unreadEvents } from '../unreadStore';
+import { useUnread } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
@@ -29,8 +28,9 @@ function formatTime(iso?: string): string {
 export default function ChatListScreen({ navigation }: Props) {
   const userId = getSessionUserId();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
-  const [unread, setUnread] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
+  const unread = useUnread((s) => s.byRoom);
+  const setManyUnread = useUnread((s) => s.setMany);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -45,32 +45,17 @@ export default function ChatListScreen({ navigation }: Props) {
           catch { return [r.id, 0] as const; }
         }),
       );
-      const map = Object.fromEntries(counts) as Record<number, number>;
-      setUnread(map);
-      // OS 앱 아이콘 뱃지 카운트 = 모든 방의 unread 합. 권한 없으면 silent.
-      const total = Object.values(map).reduce((a, b) => a + b, 0);
-      Notifications.setBadgeCountAsync(total).catch(() => { /* iOS 권한 / Android 미지원 무시 */ });
+      // setMany 가 store 에 반영 + OS 뱃지 자동 동기화까지 처리
+      setManyUnread(Object.fromEntries(counts) as Record<number, number>);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setManyUnread]);
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 15_000); // 15s 폴링
-    // ChatRoomScreen 이 markRead 후 즉시 unread sync 를 요청하면 즉시 반영
-    const off = unreadEvents.subscribe((roomId) => {
-      setUnread((prev) => {
-        const next = { ...prev, [roomId]: 0 };
-        const total = Object.values(next).reduce((a, b) => a + b, 0);
-        Notifications.setBadgeCountAsync(total).catch(() => { /* noop */ });
-        return next;
-      });
-    });
-    return () => {
-      clearInterval(id);
-      off();
-    };
+    const id = setInterval(load, 15_000); // 15s 폴링 — markRead 즉시 sync 는 store 가 처리
+    return () => clearInterval(id);
   }, [load]);
 
   if (!userId) {
