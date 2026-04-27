@@ -64,6 +64,15 @@ jobs:
 
       - name: Production build
         run: npm run build
+        env:
+          # Sentry release 태깅 — 토큰이 시크릿에 있으면 자동 sourcemap 업로드.
+          # 미설정 시 vite.config.ts 의 sentryVitePlugin 이 silent.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          # 런타임에 emit 되는 이벤트도 같은 release 로 묶이도록 build-time inject
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
 
       - name: Upload dist (optional)
         uses: actions/upload-artifact@v4

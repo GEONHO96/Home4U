@@ -12,6 +12,8 @@ if (dsn) {
   Sentry.init({
     dsn,
     environment: (import.meta.env.VITE_SENTRY_ENV as string | undefined) ?? import.meta.env.MODE,
+    // CI 가 build 시점에 VITE_SENTRY_RELEASE=${{ github.sha }} 를 inject — sourcemap 과 자동 매칭
+    release: import.meta.env.VITE_SENTRY_RELEASE as string | undefined,
     tracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE ?? 0.1),
     integrations: [Sentry.browserTracingIntegration()],
   });
