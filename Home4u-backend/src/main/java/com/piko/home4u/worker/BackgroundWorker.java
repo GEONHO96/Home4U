@@ -7,6 +7,7 @@ import com.piko.home4u.service.PushService;
 import com.piko.home4u.service.SavedSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -36,8 +37,9 @@ public class BackgroundWorker {
     @Autowired(required = false)
     private PushService pushService;
 
-    /** 1분 heartbeat — 워커가 살아있는지 확인. */
+    /** 1분 heartbeat — 워커가 살아있는지 확인. ShedLock 으로 멀티 인스턴스에서 한 번만 실행. */
     @Scheduled(fixedRate = 60_000L)
+    @SchedulerLock(name = "BackgroundWorker.heartbeat", lockAtMostFor = "PT50S", lockAtLeastFor = "PT30S")
     public void heartbeat() {
         log.debug("[worker] heartbeat at {}", LocalDateTime.now());
     }
@@ -53,6 +55,7 @@ public class BackgroundWorker {
      *     :tenantId 로 좁혀져 다른 테넌트 매물이 매칭에 섞이지 않는다.
      */
     @Scheduled(fixedRate = 5L * 60_000L)
+    @SchedulerLock(name = "BackgroundWorker.notifySavedSearchMatches", lockAtMostFor = "PT4M", lockAtLeastFor = "PT4M")
     public void notifySavedSearchMatches() {
         List<SavedSearch> all = TenantContext.runAsAllTenants(savedSearchRepository::findAll);
         for (SavedSearch s : all) {
