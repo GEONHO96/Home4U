@@ -67,8 +67,19 @@ public class DataSeeder {
     /**
      * 멀티테넌시 도입 직후 1회: tenant 컬럼이 비어있는 기존 User/Property 행을 'default' 로 채움.
      * 이후 등록은 UserService/PropertyService 가 직접 세팅한다.
+     *
+     * 의도적으로 모든 테넌트의 데이터를 봐야 하므로 TenantContext.runAsAllTenants 로
+     * Hibernate filter 를 끈 상태에서 실행한다 — startup 시점이라 컨텍스트가 비어 있긴 하지만
+     * 명시적으로 표시해 향후 누군가 read-side 격리를 더 엄격히 켜더라도 이 잡이 깨지지 않게 한다.
      */
     private void backfillTenants() {
+        com.piko.home4u.config.TenantContext.runAsAllTenants(() -> {
+            backfillTenantsImpl();
+            return null;
+        });
+    }
+
+    private void backfillTenantsImpl() {
         var defaultTenant = tenantRepo.findBySlug("default").orElse(null);
         if (defaultTenant == null) return;
         int touched = 0;

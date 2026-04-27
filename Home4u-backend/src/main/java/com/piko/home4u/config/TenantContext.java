@@ -30,4 +30,35 @@ public final class TenantContext {
         CURRENT_SLUG.remove();
         CURRENT_ID.remove();
     }
+
+    /**
+     * 의도적으로 모든 테넌트 데이터를 스캔해야 하는 백그라운드 / 시드 코드용.
+     * 호출 블록 안에서 TenantContext 가 비어 있어 Hibernate filter 가 활성화되지 않는다.
+     * 종료 시 이전 컨텍스트를 복원한다.
+     */
+    public static <T> T runAsAllTenants(java.util.function.Supplier<T> body) {
+        String prevSlug = CURRENT_SLUG.get();
+        Long prevId = CURRENT_ID.get();
+        clear();
+        try {
+            return body.get();
+        } finally {
+            if (prevSlug != null) CURRENT_SLUG.set(prevSlug);
+            if (prevId != null) CURRENT_ID.set(prevId);
+        }
+    }
+
+    /** 한 테넌트로 임시 스코프 — 워커가 사용자 단위로 작업할 때 사용. */
+    public static <T> T runForTenant(String slug, Long tenantId, java.util.function.Supplier<T> body) {
+        String prevSlug = CURRENT_SLUG.get();
+        Long prevId = CURRENT_ID.get();
+        CURRENT_SLUG.set(slug);
+        CURRENT_ID.set(tenantId);
+        try {
+            return body.get();
+        } finally {
+            if (prevSlug == null) CURRENT_SLUG.remove(); else CURRENT_SLUG.set(prevSlug);
+            if (prevId == null) CURRENT_ID.remove(); else CURRENT_ID.set(prevId);
+        }
+    }
 }
