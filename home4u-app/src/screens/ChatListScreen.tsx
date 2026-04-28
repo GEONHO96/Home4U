@@ -13,6 +13,7 @@ import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
 import { getBackgroundUnreadState, type BgFetchState } from '../backgroundUnread';
 import { useUnread, useUnreadHydrated } from '../unreadStore';
+import { useToast } from '../toastStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
@@ -34,6 +35,7 @@ export default function ChatListScreen({ navigation }: Props) {
   const unread = useUnread((s) => s.byRoom);
   const setManyUnread = useUnread((s) => s.setMany);
   const hydrated = useUnreadHydrated();
+  const showToast = useToast((s) => s.show);
 
   useEffect(() => {
     getBackgroundUnreadState().then(setBgState).catch(() => setBgState('unsupported'));
@@ -54,10 +56,12 @@ export default function ChatListScreen({ navigation }: Props) {
       );
       // setMany 가 store 에 반영 + OS 뱃지 자동 동기화까지 처리
       setManyUnread(Object.fromEntries(counts) as Record<number, number>);
+    } catch (err) {
+      showToast({ tone: 'error', message: (err as Error).message ?? '채팅 목록을 불러오지 못했습니다.' });
     } finally {
       setLoading(false);
     }
-  }, [userId, setManyUnread]);
+  }, [userId, setManyUnread, showToast]);
 
   useEffect(() => {
     // hydrate 완료 전에는 폴링을 시작하지 않음 — 0 으로 깜빡이는 것 방지

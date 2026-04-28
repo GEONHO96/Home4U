@@ -18,6 +18,7 @@ import {
   getSessionUserId,
   type Transaction,
 } from '../api';
+import { useToast } from '../toastStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Transactions'>;
 
@@ -30,9 +31,11 @@ const STATUS_LABEL: Record<Transaction['status'], string> = {
 
 export default function TransactionsScreen({ navigation }: Props) {
   const userId = getSessionUserId();
+
   const [items, setItems] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const showToast = useToast((s) => s.show);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -40,10 +43,12 @@ export default function TransactionsScreen({ navigation }: Props) {
     try {
       const data = await getMyTransactionsAsBuyer(userId);
       setItems(data);
+    } catch (err) {
+      showToast({ tone: 'error', message: (err as Error).message ?? '거래 목록을 불러오지 못했습니다.' });
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, showToast]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -61,9 +66,10 @@ export default function TransactionsScreen({ navigation }: Props) {
             try {
               const intent = await createPaymentIntent(tx.id);
               await confirmPayment(intent.id, `stub-key-${intent.id}`);
+              showToast({ tone: 'success', message: `거래 #${tx.id} 결제 완료` });
               await load();
             } catch (err) {
-              Alert.alert('결제 실패', (err as Error).message ?? '알 수 없는 오류');
+              showToast({ tone: 'error', message: (err as Error).message ?? '결제 실패' });
             } finally {
               setBusy(null);
             }
