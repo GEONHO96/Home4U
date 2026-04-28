@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { injectFakeSession, mockBackend } from './fixtures/backendMock';
 
 /**
  * 핵심 페이지 a11y 검증 — axe-core 의 wcag2a + wcag2aa 규칙으로 critical/serious 위반이 없어야 한다.
@@ -82,26 +83,9 @@ test.describe('a11y · WCAG 2.0 A/AA', () => {
    */
   test('인증된 매물 상세 페이지의 skip-link 가 main 에 포커스 (mock 격리)', async ({ page, context }) => {
     const propertyId = 9999;
-
-    // 외부 호출은 모두 빈 응답으로 가로채 e2e 가 백엔드에 의존하지 않게 한다.
-    // Layout 의 skip-link 만 집중 검증하므로 자식 페이지의 데이터 정합성은 무관.
-    await context.route('**/localhost:8080/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes(`/properties/${propertyId}`)) {
-        return route.fulfill({
-          status: 404, contentType: 'application/json',
-          body: JSON.stringify({ message: 'mocked not found' }),
-        });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-    });
-
-    await context.addInitScript(() => {
-      localStorage.setItem('token', 'mock-jwt');
-      localStorage.setItem('userId', '2');
-      localStorage.setItem('username', 'a11y_mock_buyer');
-      localStorage.setItem('role', 'ROLE_USER');
-    });
+    // 공용 fixture 사용 — 백엔드 의존 X. 자식 페이지 데이터 정합성은 무관, Layout 의 skip-link 만 검증.
+    await mockBackend(context, { propertyId, propertyStatus: 404 });
+    await injectFakeSession(context, { username: 'a11y_mock_buyer' });
 
     await page.goto(`/properties/${propertyId}`);
     // Layout 은 항상 마운트되므로 skip-link 가 DOM 에 붙는다 — 자식 페이지의 데이터 결과와 무관.
