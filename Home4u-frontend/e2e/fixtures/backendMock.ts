@@ -170,31 +170,50 @@ export interface MockTransactionOptions {
 
 /**
  * /transactions/buyer/{userId} + /payments POST + /payments/{id}/confirm 응답 mock.
- * 거래→결제 e2e 의 외부 의존을 끊는다.
+ *
+ * 상태 머신: confirm 호출 후 동일 transactionId 의 상태를 COMPLETED 로 자동 전이시켜
+ * 후속 /transactions/buyer 조회가 갱신된 라벨을 반환한다 (실제 백엔드의 confirm 동작과 동등).
  */
 export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<void> {
-  const txs = (options.transactions ?? []).map((t) => ({
+  const state = (options.transactions ?? []).map((t) => ({
     id: t.id,
-    status: t.status,
+    status: t.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED',
     property: { id: t.propertyId ?? 9999, title: t.propertyTitle ?? 'mock 매물', price: t.price ?? 30000 },
     buyer: { id: 2, username: 'mock_buyer' },
     seller: { id: 3, username: 'mock_seller' },
     date: t.status === 'COMPLETED' ? new Date().toISOString().slice(0, 10) : null,
   }));
   const paymentId = options.paymentId ?? 11;
+  let confirmedTxId: number | null = null;
 
   await context.route('**/transactions/buyer/**', (r) => r.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify(txs),
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify(state),
   }));
   await context.route('**/transactions/seller/**', (r) => r.fulfill({
     status: 200, contentType: 'application/json', body: '[]',
   }));
-  await context.route('**/payments?transactionId=*', (r) => r.fulfill({
-    status: 200, contentType: 'application/json',
-    body: JSON.stringify({ id: paymentId, amount: 30000, status: 'PENDING', providerOrderId: 'h4u-' + paymentId, transaction: txs[0] }),
-  }));
-  await context.route(`**/payments/${paymentId}/confirm`, (r) => r.fulfill({
-    status: 200, contentType: 'application/json',
-    body: JSON.stringify({ id: paymentId, status: 'SUCCEEDED', transaction: { ...txs[0], status: 'COMPLETED' } }),
-  }));
+  await context.route('**/payments?transactionId=*', (r) => {
+    const url = r.request().url();
+    const m = /transactionId=(\d+)/.exec(url);
+    confirmedTxId = m ? Number(m[1]) : state[0]?.id ?? null;
+    return r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: paymentId, amount: 30000, status: 'PENDING', providerOrderId: 'h4u-' + paymentId, transaction: state.find((t) => t.id === confirmedTxId) ?? state[0] }),
+    });
+  });
+  await context.route(`**/payments/${paymentId}/confirm`, (r) => {
+    // 결제 confirm → 해당 거래의 status 를 COMPLETED 로 전이 (다음 /transactions/buyer 조회가 갱신됨)
+    if (confirmedTxId != null) {
+      const tx = state.find((t) => t.id === confirmedTxId);
+      if (tx) {
+        tx.status = 'COMPLETED';
+        tx.date = new Date().toISOString().slice(0, 10);
+      }
+    }
+    return r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: paymentId, status: 'SUCCEEDED', transaction: state.find((t) => t.id === confirmedTxId) }),
+    });
+  });
 }

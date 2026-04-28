@@ -91,7 +91,8 @@ test('buyer 가 결제하기를 누르면 거래가 COMPLETED 로 전이된다',
     localStorage.setItem('role', session.role);
   }, buyer);
 
-  page.on('dialog', (dialog) => dialog.accept());
+  // dialog 가 매우 빠르게 닫히는 경우(타이밍 race) accept 가 throw 할 수 있어 swallow
+  page.on('dialog', (dialog) => { dialog.accept().catch(() => { /* already dismissed */ }); });
 
   await page.goto('/transactions/me?tab=buyer');
   const payBtn = page.getByRole('button', { name: /결제하기|결제 중/ }).first();

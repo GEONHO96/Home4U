@@ -25,7 +25,8 @@ test.describe('a11y · WCAG 2.0 A/AA', () => {
     test(`${p.name} (${p.path}) 페이지가 critical/serious 위반이 없어야 한다`, async ({ page }) => {
       await page.goto(p.path);
       // 페이지 마운트 대기
-      await page.waitForLoadState('networkidle');
+      // skip-link 마운트 = Layout 렌더 완료. networkidle 은 Vite HMR WS 등으로 인해 flaky.
+      await page.locator('a.skip-link').waitFor({ state: 'attached', timeout: 10_000 });
 
       const result = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa'])
@@ -60,7 +61,8 @@ test.describe('a11y · WCAG 2.0 A/AA', () => {
   for (const p of SKIPLINK_PAGES) {
     test(`${p.name} 의 skip-link 가 main 에 포커스를 옮긴다`, async ({ page }) => {
       await page.goto(p.path);
-      await page.waitForLoadState('networkidle');
+      // skip-link 마운트 = Layout 렌더 완료. networkidle 은 Vite HMR WS 등으로 인해 flaky.
+      await page.locator('a.skip-link').waitFor({ state: 'attached', timeout: 10_000 });
 
       // Tab 한 번 → 첫 포커스 가능 요소가 skip-link 여야 한다
       await page.keyboard.press('Tab');
