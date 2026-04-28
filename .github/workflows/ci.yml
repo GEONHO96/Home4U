@@ -207,8 +207,20 @@ jobs:
           path: .lighthouseci-base
         continue-on-error: true
 
-      - name: Fetch latest main scores (push 이벤트 fallback)
-        if: github.event_name != 'pull_request' || steps.lhci-base-pr.outcome == 'failure'
+      - name: Verify base artifact has lhr-*.json
+        id: lhci-base-check
+        if: always()
+        run: |
+          if [ -d ".lighthouseci-base" ] && ls .lighthouseci-base/lhr-*.json >/dev/null 2>&1; then
+            echo "has_base=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_base=0" >> "$GITHUB_OUTPUT"
+            # 빈 디렉토리는 다음 fallback 이 깔끔하게 다운로드받게 제거
+            rm -rf .lighthouseci-base
+          fi
+
+      - name: Fetch latest main scores (PR base 비었거나 push 이벤트일 때)
+        if: steps.lhci-base-check.outputs.has_base == '0'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
