@@ -31,6 +31,11 @@ interface ToastState {
 
 let seq = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
+// 같은 spoken 문구가 짧은 간격으로 연달아 발화되는 케이스 방지 — OS 큐가 잘려 마지막만 읽히는 사용자 경험을
+// 막기 위해 동일 문구 + DEBOUNCE_MS 이내 재호출이면 announceForAccessibility 만 스킵 (시각 토스트는 그대로 갱신).
+const ANNOUNCE_DEBOUNCE_MS = 1500;
+let lastAnnouncedSpoken: string | null = null;
+let lastAnnouncedAt = 0;
 
 export const useToast = create<ToastState>((set) => ({
   current: null,
@@ -43,7 +48,13 @@ export const useToast = create<ToastState>((set) => ({
     // 의존하지 않고 OS 큐로 직접 전달. error 톤은 prefix 로 맥락 추가.
     if (Platform.OS !== 'web') {
       const spoken = (tone === 'error' ? '오류: ' : tone === 'success' ? '완료: ' : '') + message;
-      try { AccessibilityInfo.announceForAccessibility(spoken); } catch { /* noop */ }
+      const now = Date.now();
+      const isDuplicate = spoken === lastAnnouncedSpoken && now - lastAnnouncedAt < ANNOUNCE_DEBOUNCE_MS;
+      if (!isDuplicate) {
+        try { AccessibilityInfo.announceForAccessibility(spoken); } catch { /* noop */ }
+        lastAnnouncedSpoken = spoken;
+        lastAnnouncedAt = now;
+      }
     }
     timer = setTimeout(() => {
       // 자동 dismiss — 다른 show 가 사이에 끼면 id 가 다르므로 함부로 끄지 않음
@@ -56,3 +67,9 @@ export const useToast = create<ToastState>((set) => ({
     set({ current: null });
   },
 }));
+
+// 테스트 전용 — 디바운스 상태를 리셋해 단위 테스트 격리
+export function __resetToastAnnounceForTests(): void {
+  lastAnnouncedSpoken = null;
+  lastAnnouncedAt = 0;
+}
