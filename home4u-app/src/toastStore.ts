@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { AccessibilityInfo, Platform } from 'react-native';
 
 /**
  * 화면 전반에서 공통으로 띄우는 토스트 store.
@@ -38,6 +39,12 @@ export const useToast = create<ToastState>((set) => ({
     const entry: ToastEntry = { id: seq, tone, message };
     if (timer) clearTimeout(timer);
     set({ current: entry });
+    // a11y: VoiceOver / TalkBack 가 즉시 메시지를 읽도록 — accessibilityLiveRegion 의 화면 리렌더 타이밍에
+    // 의존하지 않고 OS 큐로 직접 전달. error 톤은 prefix 로 맥락 추가.
+    if (Platform.OS !== 'web') {
+      const spoken = (tone === 'error' ? '오류: ' : tone === 'success' ? '완료: ' : '') + message;
+      try { AccessibilityInfo.announceForAccessibility(spoken); } catch { /* noop */ }
+    }
     timer = setTimeout(() => {
       // 자동 dismiss — 다른 show 가 사이에 끼면 id 가 다르므로 함부로 끄지 않음
       set((state) => (state.current?.id === entry.id ? { current: null } : state));
