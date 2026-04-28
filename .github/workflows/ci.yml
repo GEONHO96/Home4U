@@ -210,14 +210,23 @@ jobs:
       - name: Verify base artifact has lhr-*.json
         id: lhci-base-check
         if: always()
+        # OS-agnostic: bash test 와 ls glob 대신 node 의 fs 로 처리 — Windows runner / fish shell 등에서도 동일하게 동작
         run: |
-          if [ -d ".lighthouseci-base" ] && ls .lighthouseci-base/lhr-*.json >/dev/null 2>&1; then
-            echo "has_base=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_base=0" >> "$GITHUB_OUTPUT"
-            # 빈 디렉토리는 다음 fallback 이 깔끔하게 다운로드받게 제거
-            rm -rf .lighthouseci-base
-          fi
+          node -e "
+            const fs = require('fs');
+            const path = '.lighthouseci-base';
+            let has = false;
+            if (fs.existsSync(path)) {
+              try {
+                has = fs.readdirSync(path).some((f) => /^lhr-.*\.json$/.test(f));
+              } catch { has = false; }
+            }
+            if (!has) {
+              try { fs.rmSync(path, { recursive: true, force: true }); } catch { /* noop */ }
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_base=' + (has ? '1' : '0') + '\n');
+          "
+        shell: bash
 
       - name: Fetch latest main scores (PR base 비었거나 push 이벤트일 때)
         if: steps.lhci-base-check.outputs.has_base == '0'
