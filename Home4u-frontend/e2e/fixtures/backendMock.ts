@@ -105,3 +105,96 @@ export async function injectFakeSession(
     localStorage.setItem('role', session.role);
   }, s);
 }
+
+// ---- 채팅 / 거래 시나리오 mock ------------------------------------------------
+
+export interface MockChatRoomOptions {
+  roomId?: number;
+  buyerId?: number;
+  sellerId?: number;
+  property?: { id: number; title: string };
+  messages?: Array<{ id: number; senderId: number; content: string }>;
+  unread?: number;
+}
+
+/**
+ * /chats?userId · /chats/{roomId}/messages · /chats/{roomId}/unread-count · POST /chats/{roomId}/read 응답을 mock.
+ */
+export async function mockChatRoom(context: BrowserContext, options: MockChatRoomOptions = {}): Promise<void> {
+  const roomId = options.roomId ?? 1;
+  const buyer = { id: options.buyerId ?? 2, username: 'mock_buyer' };
+  const seller = { id: options.sellerId ?? 3, username: 'mock_seller' };
+  const property = options.property ?? { id: 9999, title: 'mock 매물' };
+  const messages = (options.messages ?? []).map((m) => ({
+    id: m.id,
+    sender: m.senderId === buyer.id ? buyer : seller,
+    content: m.content,
+    createdAt: new Date().toISOString(),
+    readAt: null,
+  }));
+  const unread = options.unread ?? 0;
+
+  await context.route('**/chats?userId=*', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ id: roomId, buyer, seller, property, lastMessageAt: new Date().toISOString() }]),
+  }));
+  await context.route(`**/chats/${roomId}/messages**`, (route) => {
+    if (route.request().method() === 'POST') {
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ id: Date.now(), content: 'echo', sender: buyer, createdAt: new Date().toISOString() }),
+      });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(messages) });
+  });
+  await context.route(`**/chats/${roomId}/unread-count**`, (r) => r.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ count: unread }),
+  }));
+  await context.route(`**/chats/${roomId}/read**`, (r) => r.fulfill({
+    status: 200, contentType: 'application/json', body: '{}',
+  }));
+}
+
+export interface MockTransactionOptions {
+  /** 거래 목록 — 비어있으면 [] */
+  transactions?: Array<{
+    id: number;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+    propertyId?: number;
+    propertyTitle?: string;
+    price?: number;
+  }>;
+  /** 결제 인텐트/confirm 시 사용할 paymentId */
+  paymentId?: number;
+}
+
+/**
+ * /transactions/buyer/{userId} + /payments POST + /payments/{id}/confirm 응답 mock.
+ * 거래→결제 e2e 의 외부 의존을 끊는다.
+ */
+export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<void> {
+  const txs = (options.transactions ?? []).map((t) => ({
+    id: t.id,
+    status: t.status,
+    property: { id: t.propertyId ?? 9999, title: t.propertyTitle ?? 'mock 매물', price: t.price ?? 30000 },
+    buyer: { id: 2, username: 'mock_buyer' },
+    seller: { id: 3, username: 'mock_seller' },
+    date: t.status === 'COMPLETED' ? new Date().toISOString().slice(0, 10) : null,
+  }));
+  const paymentId = options.paymentId ?? 11;
+
+  await context.route('**/transactions/buyer/**', (r) => r.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(txs),
+  }));
+  await context.route('**/transactions/seller/**', (r) => r.fulfill({
+    status: 200, contentType: 'application/json', body: '[]',
+  }));
+  await context.route('**/payments?transactionId=*', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ id: paymentId, amount: 30000, status: 'PENDING', providerOrderId: 'h4u-' + paymentId, transaction: txs[0] }),
+  }));
+  await context.route(`**/payments/${paymentId}/confirm`, (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ id: paymentId, status: 'SUCCEEDED', transaction: { ...txs[0], status: 'COMPLETED' } }),
+  }));
+}
