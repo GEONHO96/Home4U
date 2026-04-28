@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,13 +12,15 @@ import * as Notifications from 'expo-notifications';
  * - markRead: 한 방을 0 으로 — ChatRoom 진입/메시지 도착 시
  * - total: 모든 방 합계 — OS 앱 아이콘 뱃지 카운트로 사용
  *
- * 어디서나 useUnread() 로 구독하면 Provider 없이 컴포넌트 트리 전반에 전파된다.
- * 변경 시마다 OS 뱃지를 자동 동기화 (권한 미허용 / 미지원 시 silent).
- *
  * persist middleware:
  *   - AsyncStorage 에 byRoom 만 직렬화 — 함수는 제외
  *   - 앱 재시작 시 초기 마운트에 마지막 카운트가 즉시 표시되어 첫 화면 깜빡임 제거
  *   - rehydrate 직후에도 OS 뱃지 동기화
+ *
+ * useUnreadHydrated() 훅:
+ *   - persist hydration 이 끝나기 전에는 false 를 반환
+ *   - ChatList 의 setInterval / BG fetch / setMany 는 이 값이 true 가 된 뒤에 실행해
+ *     stale 0 으로 깜빡이는 것을 막는다.
  */
 interface UnreadState {
   byRoom: Record<number, number>;
@@ -49,7 +52,6 @@ export const useUnread = create<UnreadState>()(
     {
       name: 'home4u-unread-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      // 함수는 직렬화 대상이 아니지만, 명시적으로 byRoom 만 영속 — 향후 새 필드 추가 시 회귀 방지
       partialize: (state) => ({ byRoom: state.byRoom }) as Pick<UnreadState, 'byRoom'>,
       onRehydrateStorage: () => (state) => {
         if (state?.byRoom) syncBadge(state.byRoom);
@@ -57,3 +59,16 @@ export const useUnread = create<UnreadState>()(
     },
   ),
 );
+
+export function useUnreadHydrated(): boolean {
+  const [hydrated, setHydrated] = useState<boolean>(() => useUnread.persist.hasHydrated());
+  useEffect(() => {
+    if (useUnread.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    const unsubFinish = useUnread.persist.onFinishHydration(() => setHydrated(true));
+    return () => { unsubFinish(); };
+  }, []);
+  return hydrated;
+}

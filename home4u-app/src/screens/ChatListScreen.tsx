@@ -12,7 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
 import { getBackgroundUnreadState, type BgFetchState } from '../backgroundUnread';
-import { useUnread } from '../unreadStore';
+import { useUnread, useUnreadHydrated } from '../unreadStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
 
@@ -33,6 +33,7 @@ export default function ChatListScreen({ navigation }: Props) {
   const [bgState, setBgState] = useState<BgFetchState | null>(null);
   const unread = useUnread((s) => s.byRoom);
   const setManyUnread = useUnread((s) => s.setMany);
+  const hydrated = useUnreadHydrated();
 
   useEffect(() => {
     getBackgroundUnreadState().then(setBgState).catch(() => setBgState('unsupported'));
@@ -59,10 +60,12 @@ export default function ChatListScreen({ navigation }: Props) {
   }, [userId, setManyUnread]);
 
   useEffect(() => {
+    // hydrate 완료 전에는 폴링을 시작하지 않음 — 0 으로 깜빡이는 것 방지
+    if (!hydrated) return;
     load();
     const id = setInterval(load, 15_000); // 15s 폴링 — markRead 즉시 sync 는 store 가 처리
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, hydrated]);
 
   if (!userId) {
     return (
