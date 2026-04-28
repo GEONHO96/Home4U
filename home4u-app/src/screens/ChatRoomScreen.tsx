@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -30,7 +32,21 @@ export default function ChatRoomScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [transport, setTransport] = useState<'stomp' | 'polling'>('stomp');
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
   const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  // 서버 ERROR 프레임 도착 시 inline 토스트 — 3초 후 페이드아웃.
+  // 자세한 내용은 Alert.alert 로도 한 번 노출 (사용자 readability 우선).
+  const showError = useCallback((message: string) => {
+    setErrorToast(message);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      Animated.delay(2700),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => setErrorToast(null));
+    Alert.alert('전송 실패', message);
+  }, [toastOpacity]);
 
   const load = useCallback(async () => {
     try {
@@ -71,11 +87,7 @@ export default function ChatRoomScreen({ route }: Props) {
         setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, m]);
       },
       onError: () => fallbackToPolling(),
-      onServerError: (e) => {
-        // 서버가 거부한 publish — 사용자에게 안내 (Alert 대신 inline 토스트가 정석이지만 데모용)
-        // eslint-disable-next-line no-console
-        console.warn('[chat] server rejected publish:', e.message);
-      },
+      onServerError: (e) => showError(e.message ?? '메시지 전송이 거부됐습니다.'),
     });
     stompRef.current = handle;
 
@@ -84,6 +96,8 @@ export default function ChatRoomScreen({ route }: Props) {
       stompRef.current = null;
       handle.close();
     };
+  // showError 는 stable (useCallback) 이지만 dep 배열에 포함시켜 lint 경고 방지
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, load]);
 
   useEffect(() => {
@@ -113,6 +127,11 @@ export default function ChatRoomScreen({ route }: Props) {
       <View style={styles.transportBar}>
         <Text style={styles.transportText}>{transport === 'stomp' ? '🟢 실시간 (STOMP)' : '🟡 폴링 (5s)'}</Text>
       </View>
+      {errorToast && (
+        <Animated.View style={[styles.errorToast, { opacity: toastOpacity }]} pointerEvents="none">
+          <Text style={styles.errorToastText}>⚠ {errorToast}</Text>
+        </Animated.View>
+      )}
       {loading ? (
         <View style={styles.center}><ActivityIndicator /></View>
       ) : (
@@ -169,4 +188,15 @@ const styles = StyleSheet.create({
   sendBtnText: { color: '#fff', fontWeight: '700' },
   transportBar: { padding: 6, alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ebedf0' },
   transportText: { fontSize: 11, color: '#6b7585' },
+  errorToast: {
+    position: 'absolute',
+    top: 36,
+    alignSelf: 'center',
+    backgroundColor: '#e02929',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    zIndex: 50,
+  },
+  errorToastText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
