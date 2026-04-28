@@ -324,3 +324,78 @@ jobs:
           name: lighthouse-report
           path: Home4u-frontend/.lighthouseci
           if-no-files-found: ignore
+
+  # OS-agnostic 베이스 verify 스크립트의 windows runner 회귀 — bash + node fs.readdirSync 경로 처리가
+  # 디렉토리 구분자/glob 동작 차이 없이 동일하게 작동하는지 가볍게 검증. LHCI 본체는 ubuntu 만 돌린다.
+  lighthouse-script-windows-smoke:
+    name: Frontend · Lighthouse verify (Windows smoke)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify base 디렉토리 + lhr-*.json 케이스
+        run: |
+          mkdir -p .lighthouseci-base
+          # 합성 lhr-*.json 1개 — has_base=1 이 나와야 함
+          echo '{"categories":{}}' > .lighthouseci-base/lhr-synthetic.json
+          : > out.tmp
+          GITHUB_OUTPUT=$(pwd)/out.tmp node -e "
+            const fs = require('fs');
+            const path = '.lighthouseci-base';
+            let has = false;
+            if (fs.existsSync(path)) {
+              try { has = fs.readdirSync(path).some((f) => /^lhr-.*\.json$/.test(f)); }
+              catch { has = false; }
+            }
+            if (!has) { try { fs.rmSync(path, { recursive: true, force: true }); } catch {} }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_base=' + (has ? '1' : '0') + '\n');
+          "
+          cat out.tmp
+          grep -q '^has_base=1$' out.tmp || { echo 'FAIL: lhr-*.json 있는데 has_base=1 이 아님'; exit 1; }
+        shell: bash
+
+      - name: Verify 빈 base 디렉토리 케이스
+        run: |
+          rm -rf .lighthouseci-base
+          mkdir -p .lighthouseci-base
+          # lhr-*.json 없음 — has_base=0 이 나와야 함 + 디렉토리 자동 삭제
+          : > out.tmp
+          GITHUB_OUTPUT=$(pwd)/out.tmp node -e "
+            const fs = require('fs');
+            const path = '.lighthouseci-base';
+            let has = false;
+            if (fs.existsSync(path)) {
+              try { has = fs.readdirSync(path).some((f) => /^lhr-.*\.json$/.test(f)); }
+              catch { has = false; }
+            }
+            if (!has) { try { fs.rmSync(path, { recursive: true, force: true }); } catch {} }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_base=' + (has ? '1' : '0') + '\n');
+          "
+          cat out.tmp
+          grep -q '^has_base=0$' out.tmp || { echo 'FAIL: 빈 디렉토리인데 has_base=0 이 아님'; exit 1; }
+          [ ! -d .lighthouseci-base ] || { echo 'FAIL: 빈 base 디렉토리가 자동 삭제되지 않음'; exit 1; }
+        shell: bash
+
+      - name: Verify 디렉토리 자체가 없는 케이스
+        run: |
+          rm -rf .lighthouseci-base
+          : > out.tmp
+          GITHUB_OUTPUT=$(pwd)/out.tmp node -e "
+            const fs = require('fs');
+            const path = '.lighthouseci-base';
+            let has = false;
+            if (fs.existsSync(path)) {
+              try { has = fs.readdirSync(path).some((f) => /^lhr-.*\.json$/.test(f)); }
+              catch { has = false; }
+            }
+            if (!has) { try { fs.rmSync(path, { recursive: true, force: true }); } catch {} }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_base=' + (has ? '1' : '0') + '\n');
+          "
+          cat out.tmp
+          grep -q '^has_base=0$' out.tmp || { echo 'FAIL: 미존재 디렉토리인데 has_base=0 이 아님'; exit 1; }
+        shell: bash
