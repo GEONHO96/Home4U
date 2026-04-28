@@ -196,12 +196,23 @@ jobs:
           mkdir -p .lighthouseci-current
         shell: bash
 
-      - name: Fetch base branch scores (artifact 기반 추세)
+      - name: Fetch base branch scores (PR — base 브랜치)
+        id: lhci-base-pr
         if: github.event_name == 'pull_request'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
           branch: ${{ github.event.pull_request.base.ref }}
+          name: lighthouse-report
+          path: .lighthouseci-base
+        continue-on-error: true
+
+      - name: Fetch latest main scores (push 이벤트 fallback)
+        if: github.event_name != 'pull_request' || steps.lhci-base-pr.outcome == 'failure'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          branch: main
           name: lighthouse-report
           path: .lighthouseci-base
         continue-on-error: true
