@@ -166,15 +166,22 @@ export interface MockTransactionOptions {
   }>;
   /** 결제 인텐트/confirm 시 사용할 paymentId */
   paymentId?: number;
+  /** 거래 목록을 반환할 역할 view. 기본 'buyer' (기존 동작 유지). 'both' 는 buyer/seller 양쪽 모두 동일 state 반환. */
+  view?: 'buyer' | 'seller' | 'both';
 }
 
 /**
- * /transactions/buyer/{userId} + /payments POST + /payments/{id}/confirm 응답 mock.
+ * /transactions/buyer · /transactions/seller · /properties/transactions/*\/approve · /reject ·
+ * /payments · /payments/{id}/confirm 응답 mock.
  *
- * 상태 머신: confirm 호출 후 동일 transactionId 의 상태를 COMPLETED 로 자동 전이시켜
- * 후속 /transactions/buyer 조회가 갱신된 라벨을 반환한다 (실제 백엔드의 confirm 동작과 동등).
+ * 상태 머신 (백엔드 동작과 동등):
+ *  - approve 호출 → 해당 거래 PENDING → APPROVED
+ *  - reject  호출 → 해당 거래 PENDING → REJECTED
+ *  - confirm 호출 → APPROVED → COMPLETED (date 도 오늘로 세팅)
+ * 후속 /transactions/{role}/{userId} 호출이 갱신된 state 를 반환해 UI 라벨이 자연스럽게 전이된다.
  */
 export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<void> {
+  const view = options.view ?? 'buyer';
   const state = (options.transactions ?? []).map((t) => ({
     id: t.id,
     status: t.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED',
@@ -186,13 +193,41 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
   const paymentId = options.paymentId ?? 11;
   let confirmedTxId: number | null = null;
 
+  // role view — buyer / seller / both 에 따라 어느 엔드포인트가 state 를 반환할지 결정
   await context.route('**/transactions/buyer/**', (r) => r.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify(state),
+    body: JSON.stringify(view === 'buyer' || view === 'both' ? state : []),
   }));
   await context.route('**/transactions/seller/**', (r) => r.fulfill({
-    status: 200, contentType: 'application/json', body: '[]',
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify(view === 'seller' || view === 'both' ? state : []),
   }));
+
+  // 판매자: PENDING → APPROVED 전이
+  await context.route('**/properties/transactions/*/approve', (r) => {
+    const m = /\/transactions\/(\d+)\/approve/.exec(r.request().url());
+    if (m) {
+      const tx = state.find((t) => t.id === Number(m[1]));
+      if (tx && tx.status === 'PENDING') tx.status = 'APPROVED';
+    }
+    return r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ message: 'approved' }),
+    });
+  });
+  // 판매자: PENDING → REJECTED 전이 (구매자 시점에서는 본인 요청 cancel 와 동등)
+  await context.route('**/properties/transactions/*/reject', (r) => {
+    const m = /\/transactions\/(\d+)\/reject/.exec(r.request().url());
+    if (m) {
+      const tx = state.find((t) => t.id === Number(m[1]));
+      if (tx && tx.status === 'PENDING') tx.status = 'REJECTED';
+    }
+    return r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ message: 'rejected' }),
+    });
+  });
+
   await context.route('**/payments?transactionId=*', (r) => {
     const url = r.request().url();
     const m = /transactionId=(\d+)/.exec(url);
