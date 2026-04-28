@@ -4,6 +4,7 @@ import { NavigationContainer, type NavigationContainerRef } from '@react-navigat
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useNotificationRouting } from './src/notifications';
+import { GlobalToast } from './src/components/GlobalToast';
 import LoginScreen from './src/screens/LoginScreen';
 import PropertyListScreen from './src/screens/PropertyListScreen';
 import PropertyDetailScreen from './src/screens/PropertyDetailScreen';
@@ -31,6 +32,7 @@ export default function App() {
   return (
     <NavigationContainer ref={navRef}>
       <StatusBar style="dark" />
+      <GlobalToast />
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{

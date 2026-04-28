@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -16,7 +14,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, listChatMessages, markRead, sendChatMessage, type ChatMessage } from '../api';
 import { connectChat } from '../stomp';
-import { useUnread } from '../unreadStore';
+import { useUnread, useUnreadHydrated } from '../unreadStore';
+import { useToast } from '../toastStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatRoom'>;
 
@@ -32,21 +31,9 @@ export default function ChatRoomScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [transport, setTransport] = useState<'stomp' | 'polling'>('stomp');
-  const [errorToast, setErrorToast] = useState<string | null>(null);
-  const toastOpacity = useRef(new Animated.Value(0)).current;
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  // 서버 ERROR 프레임 도착 시 inline 토스트 — 3초 후 페이드아웃.
-  // 자세한 내용은 Alert.alert 로도 한 번 노출 (사용자 readability 우선).
-  const showError = useCallback((message: string) => {
-    setErrorToast(message);
-    Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
-      Animated.delay(2700),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start(() => setErrorToast(null));
-    Alert.alert('전송 실패', message);
-  }, [toastOpacity]);
+  const showToast = useToast((s) => s.show);
 
   const load = useCallback(async () => {
     try {
@@ -60,14 +47,16 @@ export default function ChatRoomScreen({ route }: Props) {
   // 초기 1회 fetch — STOMP/폴링 공통.
   useEffect(() => { load(); }, [load]);
 
-  // 화면 진입 시 미읽음 → 읽음 처리. 새 메시지 도착 후에도 다시 마크 (브로드캐스트 후 자동 호출 X).
+  // 화면 진입 시 미읽음 → 읽음 처리. zustand store 가 hydrate 끝난 뒤에만 호출해
+  // markRead 가 stale 0 으로 즉시 채워졌다가 rehydrate 결과로 덮어써지는 race 차단.
   const markReadStore = useUnread((s) => s.markRead);
+  const hydrated = useUnreadHydrated();
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !hydrated) return;
     markRead(roomId, userId)
-      .then(() => markReadStore(roomId)) // zustand store → ChatList unread 즉시 0 + OS 뱃지 sync
+      .then(() => markReadStore(roomId)) // ChatList unread 즉시 0 + OS 뱃지 sync
       .catch(() => { /* 네트워크 실패는 무시 */ });
-  }, [roomId, userId, messages.length, markReadStore]);
+  }, [roomId, userId, messages.length, markReadStore, hydrated]);
 
   // STOMP 우선 — 실패 시 폴링으로 자동 전환.
   const stompRef = useRef<ReturnType<typeof connectChat> | null>(null);
@@ -87,7 +76,7 @@ export default function ChatRoomScreen({ route }: Props) {
         setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, m]);
       },
       onError: () => fallbackToPolling(),
-      onServerError: (e) => showError(e.message ?? '메시지 전송이 거부됐습니다.'),
+      onServerError: (e) => showToast({ tone: 'error', message: e.message ?? '메시지 전송이 거부됐습니다.' }),
     });
     stompRef.current = handle;
 
@@ -96,7 +85,7 @@ export default function ChatRoomScreen({ route }: Props) {
       stompRef.current = null;
       handle.close();
     };
-  // showError 는 stable (useCallback) 이지만 dep 배열에 포함시켜 lint 경고 방지
+  // showToast 는 stable selector — dep 배열에서 제외
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, load]);
 
@@ -117,6 +106,8 @@ export default function ChatRoomScreen({ route }: Props) {
       }
       setDraft('');
       if (transport === 'polling') await load();
+    } catch (err) {
+      showToast({ tone: 'error', message: (err as Error).message ?? '전송 실패' });
     } finally {
       setSending(false);
     }
@@ -127,11 +118,6 @@ export default function ChatRoomScreen({ route }: Props) {
       <View style={styles.transportBar}>
         <Text style={styles.transportText}>{transport === 'stomp' ? '🟢 실시간 (STOMP)' : '🟡 폴링 (5s)'}</Text>
       </View>
-      {errorToast && (
-        <Animated.View style={[styles.errorToast, { opacity: toastOpacity }]} pointerEvents="none">
-          <Text style={styles.errorToastText}>⚠ {errorToast}</Text>
-        </Animated.View>
-      )}
       {loading ? (
         <View style={styles.center}><ActivityIndicator /></View>
       ) : (
@@ -188,15 +174,4 @@ const styles = StyleSheet.create({
   sendBtnText: { color: '#fff', fontWeight: '700' },
   transportBar: { padding: 6, alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ebedf0' },
   transportText: { fontSize: 11, color: '#6b7585' },
-  errorToast: {
-    position: 'absolute',
-    top: 36,
-    alignSelf: 'center',
-    backgroundColor: '#e02929',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    zIndex: 50,
-  },
-  errorToastText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 });
