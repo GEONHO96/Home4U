@@ -1,0 +1,117 @@
+name: EAS · preview build
+
+# 모바일 앱 preview 빌드를 manual dispatch 로만 실행 — EAS 빌드는 분당 비용이 들고 시간이 오래 걸려
+# (~20-40분/플랫폼) push 마다 돌리지 않는다. ATS 분기·앱 아이콘·permission 같은 native config 회귀를
+# release 직전에 한 번 더 확인하고 TestFlight/Play Internal 까지 자동 업로드하는 용도.
+#
+# 필요한 시크릿/변수:
+#  - secrets.EXPO_TOKEN     : Expo CLI 인증 (https://expo.dev/accounts/[user]/settings/access-tokens)
+#  - vars.APPLE_ID          : Apple Developer account email (submit 시)
+#  - vars.ASC_APP_ID        : App Store Connect 앱 numeric id
+#  - vars.APPLE_TEAM_ID     : 10자리 팀 id (Membership 페이지)
+#  - secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD  : ASC submit 시 (선택, ASC API key 가 없을 때)
+#
+# 시크릿이 없으면 빌드 step 은 가드 걸리고 안내 로그만 남기며 성공 종료한다 — fork PR 등 외부 기여에서
+# 워크플로 구문 오류로 실패하지 않게.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: '빌드 플랫폼 (ios / android / all)'
+        required: true
+        default: 'ios'
+        type: choice
+        options: [ios, android, all]
+      submit:
+        description: 'TestFlight / Play Internal 자동 업로드 (시크릿 필요)'
+        required: true
+        default: false
+        type: boolean
+      profile:
+        description: 'EAS 빌드 프로파일'
+        required: true
+        default: 'preview'
+        type: choice
+        options: [preview, production]
+
+jobs:
+  eas-build:
+    name: EAS · ${{ inputs.profile }} (${{ inputs.platform }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: home4u-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check EXPO_TOKEN presence
+        id: token-gate
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN secret 미설정 — EAS 빌드 step 을 스킵합니다."
+            echo "has_token=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=1" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Install eas-cli
+        if: steps.token-gate.outputs.has_token == '1'
+        run: npm install -g eas-cli@latest
+
+      - name: Install app deps
+        if: steps.token-gate.outputs.has_token == '1'
+        run: npm install --no-audit --no-fund
+
+      - name: EAS build (--no-wait)
+        if: steps.token-gate.outputs.has_token == '1'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_BUILD_PROFILE: ${{ inputs.profile }}
+          # app.config.ts 가 이 ENV 를 참조해 ATS / cleartext 분기를 결정.
+        run: |
+          # --non-interactive: 프롬프트 차단, --no-wait: 빌드 큐에만 등록하고 즉시 종료 (러너 시간 절약)
+          eas build \
+            --profile "${{ inputs.profile }}" \
+            --platform "${{ inputs.platform }}" \
+            --non-interactive \
+            --no-wait
+        shell: bash
+
+      - name: EAS submit (TestFlight / Play Internal)
+        if: steps.token-gate.outputs.has_token == '1' && inputs.submit == true
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # eas.json 에서 $APPLE_ID 등으로 참조 — submit step 의 env 로 inject
+          APPLE_ID: ${{ vars.APPLE_ID }}
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # 가장 최근 빌드를 자동으로 잡아 업로드 (--latest)
+          eas submit \
+            --profile "${{ inputs.profile }}" \
+            --platform "${{ inputs.platform }}" \
+            --latest \
+            --non-interactive
+        shell: bash
+
+      - name: 안내 (시크릿 미설정)
+        if: steps.token-gate.outputs.has_token == '0'
+        run: |
+          cat <<'MSG'
+          EXPO_TOKEN secret 이 비어있어 실제 EAS 빌드를 건너뛰었습니다.
+          repository settings → Secrets and variables → Actions 에서 다음을 추가한 뒤 다시 dispatch 하세요:
+            - EXPO_TOKEN (필수)
+            - APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID (TestFlight submit 시)
+            - EXPO_APPLE_APP_SPECIFIC_PASSWORD (ASC API key 미설정 시)
+          MSG
+        shell: bash
