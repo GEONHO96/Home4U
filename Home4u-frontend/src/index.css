@@ -25,11 +25,11 @@
   --color-accent-contrast: #ffffff;
 
   --color-success: #1e9d55;
-  --color-danger: #e02929;
+  --color-danger: #b91c1c; /* WCAG AA: 6.15:1 on #fff1f2 (alert-error 배경) — 기존 #e02929 는 4.23:1 으로 미달 */
   --color-warn: #f6a609;
 
   --color-sold-bg: #fff1f2;
-  --color-sold-fg: #c03a3a;
+  --color-sold-fg: #b91c1c;
 
   /* ---- Typography ---- */
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
