@@ -168,6 +168,12 @@ export interface MockTransactionOptions {
   paymentId?: number;
   /** 거래 목록을 반환할 역할 view. 기본 'buyer' (기존 동작 유지). 'both' 는 buyer/seller 양쪽 모두 동일 state 반환. */
   view?: 'buyer' | 'seller' | 'both';
+  /**
+   * REJECTED 거래가 archive 되어 목록에서 사라지기까지의 ms.
+   * 실제 백엔드에서는 일정 기간 후 admin sweep job 이 archive — 그 동작을 모사한다.
+   * 미설정/0 이면 archive 하지 않음 (기존 동작 유지).
+   */
+  archiveRejectedAfterMs?: number;
 }
 
 /**
@@ -182,7 +188,17 @@ export interface MockTransactionOptions {
  */
 export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<void> {
   const view = options.view ?? 'buyer';
-  const state = (options.transactions ?? []).map((t) => ({
+  const archiveAfterMs = options.archiveRejectedAfterMs ?? 0;
+  interface TxRow {
+    id: number;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+    property: { id: number; title: string; price: number };
+    buyer: { id: number; username: string };
+    seller: { id: number; username: string };
+    date: string | null;
+    rejectedAt?: number;
+  }
+  const state: TxRow[] = (options.transactions ?? []).map((t) => ({
     id: t.id,
     status: t.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED',
     property: { id: t.propertyId ?? 9999, title: t.propertyTitle ?? 'mock 매물', price: t.price ?? 30000 },
@@ -193,14 +209,23 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
   const paymentId = options.paymentId ?? 11;
   let confirmedTxId: number | null = null;
 
+  // archive sweep — REJECTED 거래가 일정 기간 후 admin job 으로 archive 되는 백엔드 동작 모사.
+  // 매 조회 시점에 lazy 로 필터링 — 별도 setInterval/timer 없이 동작 (Playwright 의 route handler 가
+  // 노드 프로세스에서 동기 실행되므로 간결).
+  const visibleState = (): TxRow[] => {
+    if (archiveAfterMs <= 0) return state;
+    const now = Date.now();
+    return state.filter((t) => !(t.status === 'REJECTED' && t.rejectedAt != null && now - t.rejectedAt >= archiveAfterMs));
+  };
+
   // role view — buyer / seller / both 에 따라 어느 엔드포인트가 state 를 반환할지 결정
   await context.route('**/transactions/buyer/**', (r) => r.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify(view === 'buyer' || view === 'both' ? state : []),
+    body: JSON.stringify(view === 'buyer' || view === 'both' ? visibleState() : []),
   }));
   await context.route('**/transactions/seller/**', (r) => r.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify(view === 'seller' || view === 'both' ? state : []),
+    body: JSON.stringify(view === 'seller' || view === 'both' ? visibleState() : []),
   }));
 
   // 판매자: PENDING → APPROVED 전이
@@ -220,7 +245,10 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
     const m = /\/transactions\/(\d+)\/reject/.exec(r.request().url());
     if (m) {
       const tx = state.find((t) => t.id === Number(m[1]));
-      if (tx && tx.status === 'PENDING') tx.status = 'REJECTED';
+      if (tx && tx.status === 'PENDING') {
+        tx.status = 'REJECTED';
+        tx.rejectedAt = Date.now();
+      }
     }
     return r.fulfill({
       status: 200, contentType: 'application/json',

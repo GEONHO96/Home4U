@@ -60,3 +60,34 @@ test('전체 mock — 판매자 PENDING 거래 거절 → REJECTED 라벨 전이
   await expect(page.getByRole('button', { name: '거절' })).toHaveCount(0, { timeout: 10_000 });
   await expect(page.locator('.badge-sold').filter({ hasText: '거절' })).toBeVisible();
 });
+
+/**
+ * REJECTED 거래의 archive sweep 시뮬레이션 — 백엔드 admin job 이 일정 기간 후 archive 하는 동작을
+ * mockTransaction 의 archiveRejectedAfterMs (lazy filter) 로 모사.
+ *
+ * 흐름: PENDING 거래 거절 → 즉시 REJECTED 라벨 노출 → archive 윈도우 경과 후 reload → 빈 목록.
+ */
+test('전체 mock — REJECTED 거래가 archive 윈도우 경과 후 목록에서 사라진다', async ({ page, context }) => {
+  await mockBackend(context);
+  await mockTransaction(context, {
+    view: 'seller',
+    transactions: [
+      { id: 8, status: 'PENDING', propertyId: 9999, propertyTitle: 'mock archive 매물', price: 30000 },
+    ],
+    archiveRejectedAfterMs: 800, // 0.8초 후 archive — 실 백엔드의 sweep 잡 모사
+  });
+  await injectFakeSession(context, { userId: 3, username: 'mock_seller', role: 'ROLE_REALTOR' });
+
+  await page.goto('/transactions/me?tab=seller');
+  const rejectBtn = page.getByRole('button', { name: '거절' }).first();
+  await expect(rejectBtn).toBeVisible({ timeout: 10_000 });
+  await rejectBtn.click();
+
+  // 거절 직후엔 REJECTED 라벨이 보인다 (아직 archive 윈도우 미경과)
+  await expect(page.locator('.badge-sold').filter({ hasText: '거절' })).toBeVisible({ timeout: 5_000 });
+
+  // archive 윈도우 경과 후 reload — visibleState() filter 가 REJECTED + 800ms 이상 경과한 항목 제거
+  await page.waitForTimeout(900);
+  await page.reload();
+  await expect(page.getByText('해당 역할로 진행 중인 거래가 없습니다.')).toBeVisible({ timeout: 10_000 });
+});
