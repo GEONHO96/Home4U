@@ -65,3 +65,45 @@ test('전체 mock — 가상 시간 점프 후 지연 메시지 등장 (폴링/r
 
   await expectNoBlockingA11yViolations(page);
 });
+
+/**
+ * delayedMessages ↔ unread-count 연동 검증 — fixture 단위 통합 테스트.
+ *
+ * 시나리오:
+ *  - 초기: unread-count = 0
+ *  - 31초 점프 → 상대방 발신 delayed 메시지 1건 도착 → unread-count = 1
+ *  - markRead 호출 → unread-count = 0
+ *
+ * UI 가 unread 배지를 표시하지 않으므로 page.evaluate 로 fetch 직접 호출 — fixture 의 라우트 동작을
+ * 행동 단위로 박제 (실 백엔드의 unread 흐름과 동등).
+ */
+test('mockChatRoom — delayed 메시지 도착 시 unread-count 증가, markRead 후 0', async ({ page, context }) => {
+  await mockBackend(context);
+  const chat = await mockChatRoom(context, {
+    roomId: 1,
+    buyerId: 2,
+    sellerId: 3,
+    delayedMessages: [
+      { id: 21, senderId: 3, content: '도착할 메시지', afterMs: 30_000 },
+    ],
+  });
+  await injectFakeSession(context, { userId: 2 });
+
+  await page.goto('/'); // 페이지 컨텍스트 확보 — 어떤 라우트든 OK
+  const fetchUnread = () => page.evaluate(async () => {
+    const r = await fetch('http://localhost:8080/chats/1/unread-count?userId=2');
+    return (await r.json()).count;
+  });
+
+  expect(await fetchUnread()).toBe(0);
+
+  // 가상 시간 31초 점프 — 상대방 메시지 도착 (read 되지 않음)
+  chat.advanceTimeBy(31_000);
+  expect(await fetchUnread()).toBe(1);
+
+  // markRead → 0 으로 리셋
+  await page.evaluate(async () => {
+    await fetch('http://localhost:8080/chats/1/read?userId=2', { method: 'POST' });
+  });
+  expect(await fetchUnread()).toBe(0);
+});

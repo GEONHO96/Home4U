@@ -161,14 +161,18 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
   const delayed = (options.delayedMessages ?? []).map((m) => ({
     id: m.id,
     sender: m.senderId === buyer.id ? buyer : seller,
+    senderId: m.senderId,
     content: m.content,
     afterMs: m.afterMs,
   }));
-  let unread = options.unread ?? 0;
+  let baseUnread = options.unread ?? 0;
+  // 마지막 read 시점 (baseStartMs 기준 ms). markRead 호출 시 갱신 — 이 시점 이후의 delayedMessages 만 unread 로 카운트.
+  let lastReadElapsedMs = -1;
 
   // 가상 시간 기준으로 baseStartMs + afterMs 이 통과한 delayedMessages 만 visible
+  const elapsedNow = () => now() - baseStartMs;
   const visibleMessages = () => {
-    const elapsed = now() - baseStartMs;
+    const elapsed = elapsedNow();
     const extras = delayed
       .filter((d) => elapsed >= d.afterMs)
       .map((d) => ({
@@ -176,9 +180,15 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
         sender: d.sender,
         content: d.content,
         createdAt: new Date(baseStartMs + d.afterMs).toISOString(),
-        readAt: null as string | null,
+        readAt: lastReadElapsedMs >= d.afterMs ? new Date(baseStartMs + lastReadElapsedMs).toISOString() : null,
       }));
     return [...messages, ...extras];
+  };
+  // 도착했지만 아직 read 되지 않은 (상대방 발신) delayedMessages 카운트 — base unread 와 합산해 응답.
+  const computeUnread = () => {
+    const elapsed = elapsedNow();
+    const arrivedFromOther = delayed.filter((d) => elapsed >= d.afterMs && d.senderId !== buyer.id && d.afterMs > lastReadElapsedMs).length;
+    return baseUnread + arrivedFromOther;
   };
 
   await context.route('**/chats?userId=*', (route) => route.fulfill({
@@ -195,11 +205,16 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(visibleMessages()) });
   });
   await context.route(`**/chats/${roomId}/unread-count**`, (r) => r.fulfill({
-    status: 200, contentType: 'application/json', body: JSON.stringify({ count: unread }),
+    status: 200, contentType: 'application/json', body: JSON.stringify({ count: computeUnread() }),
   }));
-  await context.route(`**/chats/${roomId}/read**`, (r) => r.fulfill({
-    status: 200, contentType: 'application/json', body: '{}',
-  }));
+  await context.route(`**/chats/${roomId}/read**`, (r) => {
+    // markRead 시점에 elapsed 시간을 기록 — 이전 delayedMessages 는 모두 read 처리됨
+    lastReadElapsedMs = elapsedNow();
+    baseUnread = 0;
+    return r.fulfill({
+      status: 200, contentType: 'application/json', body: '{"updated":1}',
+    });
+  });
 
   return {
     advanceTimeBy(ms: number): void {
@@ -207,7 +222,7 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
     },
     now,
     setUnread(count: number): void {
-      unread = count;
+      baseUnread = count;
     },
   };
 }
