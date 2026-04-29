@@ -40,6 +40,10 @@ jobs:
   mobile-test:
     name: Mobile · vitest (toastStore / app.config 단위 테스트)
     runs-on: ubuntu-latest
+    # PR 코멘트 작성 권한 — GITHUB_TOKEN 기본값은 read-only 라 명시 필요
+    permissions:
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: home4u-app
@@ -69,6 +73,69 @@ jobs:
           name: mobile-coverage
           path: home4u-app/coverage
           if-no-files-found: ignore
+
+      # PR 단계에서만 base (= main) 의 mobile-coverage 아티팩트를 받아 diff 생성.
+      # main 푸시 / 첫 PR 일 때 base 가 비어있으면 coverage diff step 은 silent skip.
+      - name: Fetch base coverage (PR)
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          branch: ${{ github.event.pull_request.base.ref }}
+          name: mobile-coverage
+          path: .coverage-base
+        continue-on-error: true
+
+      - name: Compute coverage diff (PR)
+        id: cov-diff
+        if: github.event_name == 'pull_request'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const read = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
+            const cur = read('coverage/coverage-summary.json');
+            const base = read('../.coverage-base/coverage-summary.json');
+            if (!cur) {
+              console.log('::notice::current coverage-summary.json not found, skip');
+            } else {
+              const trend = (c, b) => {
+                if (b == null) return '';
+                const d = +(c - b).toFixed(2);
+                if (d > 0) return ' ▲' + d.toFixed(2);
+                if (d < 0) return ' ▼' + Math.abs(d).toFixed(2);
+                return ' =';
+              };
+              const fmt = (k) => {
+                const c = cur.total[k]?.pct ?? 0;
+                const b = base?.total?.[k]?.pct ?? null;
+                return '| ' + k + ' | ' + c.toFixed(2) + '%' + trend(c, b) + ' |';
+              };
+              const lines = [
+                '## 📊 Mobile coverage (vitest)',
+                '',
+                '| metric | % (vs base) |',
+                '|:------|:------------|',
+                fmt('lines'),
+                fmt('statements'),
+                fmt('functions'),
+                fmt('branches'),
+              ];
+              if (!base) lines.push('', '_base 아티팩트가 비어있어 추세 비교 없음 — 현재 값만 표시._');
+              const body = lines.join('\\n');
+              fs.writeFileSync('cov-comment.md', body);
+              console.log(body);
+            }
+          "
+        shell: bash
+
+      # marocchino/sticky-pull-request-comment 가 같은 header 로 코멘트 1개를 유지 (push 마다 spam X)
+      - name: Post / update coverage comment (PR)
+        if: github.event_name == 'pull_request' && hashFiles('home4u-app/cov-comment.md') != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: mobile-coverage
+          path: home4u-app/cov-comment.md
+        continue-on-error: true
 
   frontend-build:
     name: Frontend · tsc + vite build
