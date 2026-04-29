@@ -7,30 +7,35 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "expo": "~52.0.0",
-    "expo-status-bar": "~2.0.0",
-    "react": "18.3.1",
-    "react-native": "0.76.5",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/native": "^7.0.0",
     "@react-navigation/native-stack": "^7.0.0",
+    "@stomp/stompjs": "^7.3.0",
+    "axios": "^1.7.0",
+    "expo": "~52.0.0",
+    "expo-background-fetch": "~13.0.5",
+    "expo-device": "~7.0.1",
+    "expo-notifications": "~0.29.10",
+    "expo-status-bar": "~2.0.0",
+    "expo-task-manager": "~12.0.5",
+    "react": "18.3.1",
+    "react-native": "0.76.5",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
-    "axios": "^1.7.0",
-    "expo-notifications": "~0.29.10",
-    "expo-device": "~7.0.1",
-    "expo-background-fetch": "~13.0.5",
-    "expo-task-manager": "~12.0.5",
-    "@stomp/stompjs": "^7.3.0",
     "text-encoding": "^0.7.0",
-    "zustand": "^5.0.2",
-    "@react-native-async-storage/async-storage": "1.23.1"
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
-    "typescript": "~5.3.3"
+    "@vitest/expect": "^4.1.5",
+    "tsx": "^4.21.0",
+    "typescript": "~5.3.3",
+    "vitest": "^4.1.5"
   }
 }

@@ -37,6 +37,31 @@ jobs:
           path: Home4u-backend/build/reports/tests/test
           if-no-files-found: ignore
 
+  mobile-test:
+    name: Mobile · vitest (toastStore / app.config 단위 테스트)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: home4u-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: home4u-app/package-lock.json
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Vitest (단위 테스트)
+        run: npm test
+
   frontend-build:
     name: Frontend · tsc + vite build
     runs-on: ubuntu-latest
