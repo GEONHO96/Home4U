@@ -350,11 +350,16 @@ jobs:
           path: Home4u-frontend/.lighthouseci
           if-no-files-found: ignore
 
-  # OS-agnostic 베이스 verify 스크립트의 windows runner 회귀 — bash + node fs.readdirSync 경로 처리가
-  # 디렉토리 구분자/glob 동작 차이 없이 동일하게 작동하는지 가볍게 검증. LHCI 본체는 ubuntu 만 돌린다.
-  lighthouse-script-windows-smoke:
-    name: Frontend · Lighthouse verify (Windows smoke)
-    runs-on: windows-latest
+  # OS-agnostic 베이스 verify 스크립트의 모든 GitHub-hosted runner OS 회귀 — bash + node fs.readdirSync 경로
+  # 처리가 디렉토리 구분자/glob 동작 차이 없이 동일하게 작동하는지 검증. LHCI 본체는 ubuntu 만 돌린다.
+  # macos-latest 가 추가되면서 어떤 OS 가 실패해도 다른 OS 결과는 보존되도록 fail-fast 비활성화.
+  lighthouse-script-os-smoke:
+    name: Frontend · Lighthouse verify (${{ matrix.os }} smoke)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
