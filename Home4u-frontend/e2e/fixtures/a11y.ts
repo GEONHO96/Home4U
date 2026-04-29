@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
@@ -33,10 +36,49 @@ interface Violation {
   nodes: ViolationNode[];
 }
 
-// 프로세스 스코프 캐시 — playwright worker 1개 안에서만 공유 (workers > 1 이면 worker 별 독립).
-// 같은 (path + DOM length) 키가 다시 들어오면 이전 결과를 재사용해 axe 호출 비용을 줄인다.
+// 캐시 — 2단계:
+//  1) in-memory (process scope) — 같은 worker 안에서 빠른 hit
+//  2) on-disk (worker-shared, .axe-cache/{hash}.json) — workers > 1 또는 다음 run 까지 공유
+// 키: tags + skipRules + path + DOM body innerHTML 길이.
+// 캐시 디렉토리는 process.env.AXE_CACHE_DIR 또는 기본 e2e/.axe-cache.
+// CI 에서 actions/cache 로 .axe-cache 디렉토리를 보존하면 빌드 간에도 공유 가능.
 interface CachedScan { violations: Violation[] }
-const scanCache = new Map<string, CachedScan>();
+const memCache = new Map<string, CachedScan>();
+const CACHE_DIR = process.env.AXE_CACHE_DIR
+  ?? join(process.cwd(), 'e2e', '.axe-cache');
+let cacheDirReady = false;
+
+function ensureCacheDir(): void {
+  if (cacheDirReady) return;
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    cacheDirReady = true;
+  } catch { /* permission / readonly fs — fall back to mem only */ }
+}
+
+function diskKeyToPath(key: string): string {
+  // sha1 으로 안전한 파일명 — 한글 path / 특수문자 충돌 방지
+  const hash = createHash('sha1').update(key).digest('hex');
+  return join(CACHE_DIR, `${hash}.json`);
+}
+
+function loadFromDisk(key: string): CachedScan | null {
+  ensureCacheDir();
+  if (!cacheDirReady) return null;
+  const p = diskKeyToPath(key);
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, 'utf8')) as CachedScan;
+  } catch { return null; }
+}
+
+function saveToDisk(key: string, scan: CachedScan): void {
+  ensureCacheDir();
+  if (!cacheDirReady) return;
+  try {
+    writeFileSync(diskKeyToPath(key), JSON.stringify(scan));
+  } catch { /* readonly fs — silent */ }
+}
 
 export async function expectNoBlockingA11yViolations(
   page: Page,
@@ -50,12 +92,22 @@ export async function expectNoBlockingA11yViolations(
   // (DOM 길이가 같은데 내용만 바뀐 경우는 드물고, opt-out (`cache: false`) 로 회피 가능).
   let cacheKey: string | null = null;
   if (useCache) {
-    cacheKey = await page.evaluate(() => `${location.pathname}::${document.body.innerHTML.length}`);
-    cacheKey = `${tags.join(',')}@${skipRules.join(',')}#${cacheKey}`;
-    const cached = scanCache.get(cacheKey);
-    if (cached) {
-      const blocking = cached.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
-      expect(blocking, `axe scan (cached) found blocking violations`).toEqual([]);
+    const pageKey = await page.evaluate(() => `${location.pathname}::${document.body.innerHTML.length}`);
+    cacheKey = `${tags.join(',')}@${skipRules.join(',')}#${pageKey}`;
+
+    // L1: memory — 같은 worker 의 후속 호출
+    const memHit = memCache.get(cacheKey);
+    if (memHit) {
+      const blocking = memHit.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
+      expect(blocking, `axe scan (mem cache) found blocking violations`).toEqual([]);
+      return;
+    }
+    // L2: disk — workers > 1 또는 이전 run 의 결과
+    const diskHit = loadFromDisk(cacheKey);
+    if (diskHit) {
+      memCache.set(cacheKey, diskHit); // 다음 호출 빠르게
+      const blocking = diskHit.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
+      expect(blocking, `axe scan (disk cache) found blocking violations`).toEqual([]);
       return;
     }
   }
@@ -66,7 +118,11 @@ export async function expectNoBlockingA11yViolations(
   }
 
   const result = await builder.analyze();
-  if (cacheKey) scanCache.set(cacheKey, { violations: result.violations as Violation[] });
+  if (cacheKey) {
+    const entry: CachedScan = { violations: result.violations as Violation[] };
+    memCache.set(cacheKey, entry);
+    saveToDisk(cacheKey, entry);
+  }
 
   const blocking = (result.violations as Violation[]).filter((v) => v.impact === 'critical' || v.impact === 'serious');
 
@@ -89,7 +145,7 @@ export async function expectNoBlockingA11yViolations(
   expect(blocking).toEqual([]);
 }
 
-/** 테스트 격리용 — 다른 테스트 파일 사이 캐시 잔존이 의심될 때 호출. */
+/** 테스트 격리용 — 다른 테스트 파일 사이 캐시 잔존이 의심될 때 호출 (in-memory 만). */
 export function __clearA11yCache(): void {
-  scanCache.clear();
+  memCache.clear();
 }

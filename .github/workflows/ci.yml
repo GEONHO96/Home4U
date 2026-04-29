@@ -172,6 +172,16 @@ jobs:
       - name: Install web deps
         run: npm ci
 
+      - name: Restore axe scan cache
+        # 같은 page key (path + DOM length + tags) 가 다른 빌드에서 재진입할 때 axe 호출(~1s) 절감.
+        # cache miss 여도 e2e 는 정상 동작 — 그저 모든 시나리오가 fresh scan 일 뿐.
+        uses: actions/cache@v4
+        with:
+          path: Home4u-frontend/e2e/.axe-cache
+          key: axe-cache-${{ runner.os }}-${{ hashFiles('Home4u-frontend/src/**/*.{ts,tsx,css}') }}
+          restore-keys: |
+            axe-cache-${{ runner.os }}-
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
