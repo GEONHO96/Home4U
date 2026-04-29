@@ -361,13 +361,16 @@ jobs:
   # OS-agnostic 베이스 verify 스크립트의 모든 GitHub-hosted runner OS 회귀 — bash + node fs.readdirSync 경로
   # 처리가 디렉토리 구분자/glob 동작 차이 없이 동일하게 작동하는지 검증. LHCI 본체는 ubuntu 만 돌린다.
   # macos-latest 가 추가되면서 어떤 OS 가 실패해도 다른 OS 결과는 보존되도록 fail-fast 비활성화.
+  #
+  # macos runner 는 분당 8x 비용 → PR 마다 도는 건 비싸다. push (main / 릴리즈) 시점에만 매트릭스에 포함하고
+  # PR 은 ubuntu/windows 만 실행 — fromJSON 으로 이벤트 별 매트릭스 분기.
   lighthouse-script-os-smoke:
     name: Frontend · Lighthouse verify (${{ matrix.os }} smoke)
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{ github.event_name == 'pull_request' && fromJSON('["ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest","windows-latest","macos-latest"]') }}
     steps:
       - uses: actions/checkout@v4
 
