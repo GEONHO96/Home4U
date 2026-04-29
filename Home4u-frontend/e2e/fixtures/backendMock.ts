@@ -115,37 +115,84 @@ export interface MockChatRoomOptions {
   property?: { id: number; title: string };
   messages?: Array<{ id: number; senderId: number; content: string }>;
   unread?: number;
+  /**
+   * 가상 시간이 afterMs 이상 경과했을 때 메시지 목록에 추가되는 지연 메시지.
+   * controller.advanceTimeBy 로 시간을 점프하면 다음 fetch 가 갱신된 목록을 반환 — 폴링 fallback /
+   * STOMP reconnect 후 도착한 새 메시지 시뮬레이션에 사용.
+   */
+  delayedMessages?: Array<{ id: number; senderId: number; content: string; afterMs: number }>;
+}
+
+/**
+ * mockChatRoom 이 반환하는 controller — 가상 시간 점프로 delayedMessages 트리거 + unread 변경 시뮬레이션.
+ */
+export interface MockChatRoomController {
+  /** 가상 시간을 ms 만큼 진행. delayedMessages 의 afterMs 가 통과하면 다음 fetch 응답에 포함된다. */
+  advanceTimeBy(ms: number): void;
+  /** 디버깅용 — 현재 가상 now (epoch ms). */
+  now(): number;
+  /** unread-count 응답을 동적으로 변경 (예: BG fetch 사이 새 메시지 도착 시뮬레이션). */
+  setUnread(count: number): void;
 }
 
 /**
  * /chats?userId · /chats/{roomId}/messages · /chats/{roomId}/unread-count · POST /chats/{roomId}/read 응답을 mock.
+ *
+ * 시간 추상화: mockTransaction 과 동일한 advanceTimeBy 패턴 — wall clock 대기 없이
+ * polling fallback / 지연 메시지 도착 흐름을 가속해 검증.
  */
-export async function mockChatRoom(context: BrowserContext, options: MockChatRoomOptions = {}): Promise<void> {
+export async function mockChatRoom(context: BrowserContext, options: MockChatRoomOptions = {}): Promise<MockChatRoomController> {
   const roomId = options.roomId ?? 1;
   const buyer = { id: options.buyerId ?? 2, username: 'mock_buyer' };
   const seller = { id: options.sellerId ?? 3, username: 'mock_seller' };
   const property = options.property ?? { id: 9999, title: 'mock 매물' };
+  // baseStartMs — 가상 시간의 origin. delayedMessages 의 afterMs 는 이 origin 기준 상대 시각.
+  const baseStartMs = Date.now();
+  let virtualOffsetMs = 0;
+  const now = (): number => Date.now() + virtualOffsetMs;
+
   const messages = (options.messages ?? []).map((m) => ({
     id: m.id,
     sender: m.senderId === buyer.id ? buyer : seller,
     content: m.content,
-    createdAt: new Date().toISOString(),
-    readAt: null,
+    createdAt: new Date(baseStartMs).toISOString(),
+    readAt: null as string | null,
   }));
-  const unread = options.unread ?? 0;
+  const delayed = (options.delayedMessages ?? []).map((m) => ({
+    id: m.id,
+    sender: m.senderId === buyer.id ? buyer : seller,
+    content: m.content,
+    afterMs: m.afterMs,
+  }));
+  let unread = options.unread ?? 0;
+
+  // 가상 시간 기준으로 baseStartMs + afterMs 이 통과한 delayedMessages 만 visible
+  const visibleMessages = () => {
+    const elapsed = now() - baseStartMs;
+    const extras = delayed
+      .filter((d) => elapsed >= d.afterMs)
+      .map((d) => ({
+        id: d.id,
+        sender: d.sender,
+        content: d.content,
+        createdAt: new Date(baseStartMs + d.afterMs).toISOString(),
+        readAt: null as string | null,
+      }));
+    return [...messages, ...extras];
+  };
 
   await context.route('**/chats?userId=*', (route) => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify([{ id: roomId, buyer, seller, property, lastMessageAt: new Date().toISOString() }]),
+    body: JSON.stringify([{ id: roomId, buyer, seller, property, lastMessageAt: new Date(now()).toISOString() }]),
   }));
   await context.route(`**/chats/${roomId}/messages**`, (route) => {
     if (route.request().method() === 'POST') {
       return route.fulfill({
         status: 200, contentType: 'application/json',
-        body: JSON.stringify({ id: Date.now(), content: 'echo', sender: buyer, createdAt: new Date().toISOString() }),
+        body: JSON.stringify({ id: now(), content: 'echo', sender: buyer, createdAt: new Date(now()).toISOString() }),
       });
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(messages) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(visibleMessages()) });
   });
   await context.route(`**/chats/${roomId}/unread-count**`, (r) => r.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify({ count: unread }),
@@ -153,6 +200,16 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
   await context.route(`**/chats/${roomId}/read**`, (r) => r.fulfill({
     status: 200, contentType: 'application/json', body: '{}',
   }));
+
+  return {
+    advanceTimeBy(ms: number): void {
+      virtualOffsetMs += ms;
+    },
+    now,
+    setUnread(count: number): void {
+      unread = count;
+    },
+  };
 }
 
 export interface MockTransactionOptions {
