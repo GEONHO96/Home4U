@@ -7,3 +7,4 @@ web-build/
 npm-debug.*
 yarn-debug.*
 .DS_Store
+coverage/

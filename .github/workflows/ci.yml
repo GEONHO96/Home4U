@@ -59,8 +59,16 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Vitest (단위 테스트)
-        run: npm test
+      - name: Vitest (단위 테스트 + coverage 임계값)
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage
+          path: home4u-app/coverage
+          if-no-files-found: ignore
 
   frontend-build:
     name: Frontend · tsc + vite build
