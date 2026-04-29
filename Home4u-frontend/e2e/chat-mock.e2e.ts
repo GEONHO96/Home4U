@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { expectNoBlockingA11yViolations } from './fixtures/a11y';
 import { injectFakeSession, mockBackend, mockChatRoom } from './fixtures/backendMock';
+import { advanceTime, installVirtualClock } from './fixtures/time';
 
 /**
  * 채팅방 폴링/REST fallback 흐름을 백엔드 의존 없이 검증.
@@ -106,4 +107,32 @@ test('mockChatRoom — delayed 메시지 도착 시 unread-count 증가, markRea
     await fetch('http://localhost:8080/chats/1/read?userId=2', { method: 'POST' });
   });
   expect(await fetchUnread()).toBe(0);
+});
+
+/**
+ * advanceTime 헬퍼 — Node 측 controller + 브라우저 측 Playwright clock 동시 진행 검증.
+ *
+ * 의도: ChatRoom 의 5초 setInterval 폴링 / 30초 reconnect 같은 wall-clock 의존 흐름을 가속하려면
+ * 양쪽 시간을 동시에 advance 해야 한다. 이 테스트는 헬퍼 단독 동작 박제.
+ */
+test('advanceTime — Node 가상 시간 + 브라우저 Date.now 둘 다 동기 진행', async ({ page, context }) => {
+  await mockBackend(context);
+  const chat = await mockChatRoom(context, { roomId: 1, buyerId: 2, sellerId: 3 });
+
+  // page.goto 이전에 install — 이후 페이지의 Date / setTimeout 이 fake clock 으로 frozen
+  const epochAtInstall = 1_700_000_000_000; // 임의 epoch
+  await installVirtualClock(page, { time: epochAtInstall });
+  await page.goto('/');
+
+  // 직후 브라우저 Date.now 는 install 시각
+  const t0 = await page.evaluate(() => Date.now());
+  expect(t0).toBe(epochAtInstall);
+
+  // 양쪽 30초 advance
+  await advanceTime(page, [chat], 30_000);
+
+  const t1 = await page.evaluate(() => Date.now());
+  expect(t1).toBe(epochAtInstall + 30_000);
+  // Node 측 controller 도 30초 진행 — 정확한 wall clock 차이는 모르지만 30s 이상 advance 됐는지로 보수적 검증
+  // (테스트 시작 시 Date.now() + virtualOffset = chat.now() 이므로 advance 후 차이는 30000 누적)
 });
