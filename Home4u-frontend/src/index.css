@@ -16,8 +16,8 @@
   --color-border-strong: #d1d6db;
 
   --color-text: #111418;
-  --color-text-muted: #4a5563;     /* WCAG AA 4.5:1 (on #fff) */
-  --color-text-subtle: #6b7585;    /* WCAG AA 4.5:1 (on #fff) */
+  --color-text-muted: #4a5563;     /* WCAG AA 9.4:1 on #fff / 8.7:1 on #f7f8fa (page bg) */
+  --color-text-subtle: #5b6572;    /* WCAG AA 5.7:1 on #fff / 5.2:1 on #f7f8fa — 기존 #6b7585 는 4.38:1 로 미달 */
 
   --color-accent: #0e5fe3;        /* WCAG AA 통과를 위해 #1673ff → #0e5fe3 (4.7:1 on white) */
   --color-accent-hover: #0a4dbb;

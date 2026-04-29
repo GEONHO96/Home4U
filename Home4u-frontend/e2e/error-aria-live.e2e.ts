@@ -1,5 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { expectNoBlockingA11yViolations } from './fixtures/a11y';
 import { injectFakeSession, mockBackend } from './fixtures/backendMock';
 
 /**
@@ -8,24 +8,11 @@ import { injectFakeSession, mockBackend } from './fixtures/backendMock';
  * 검증 의도:
  *  - 페이지가 setError(err.message) → role="alert" 컨테이너로 렌더한다.
  *  - role="alert" 은 implicit aria-live="assertive" 라 스크린 리더가 즉시 발화 → 모바일 useToast 와 동등한 SR 경험.
- *  - **에러 상태에서도 axe-core wcag2a/aa critical/serious 위반 0건** — 에러 표시 자체가 a11y 회귀를 만들지 않도록 동시 검증.
+ *  - **에러 상태에서도 axe-core wcag2a/aa critical/serious 위반 0건** — 에러 표시 자체가 a11y 회귀를 만들지 않도록 동시 검증 (fixture 사용).
  *
  * 백엔드 의존을 없애기 위해 mockBackend 의 catch-all 위에 specific 500 라우트를 덮어 씌운다 (Playwright 는 가장 최근에 추가된 route 가 우선).
  */
 test.use({ storageState: { cookies: [], origins: [] } });
-
-/** 에러 상태 페이지의 axe-core wcag2a/aa critical/serious 위반 0건 강제 — 에러 UI 도 a11y 보호. */
-async function expectNoBlockingA11yViolations(page: Page): Promise<void> {
-  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  const blocking = result.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
-  if (blocking.length > 0) {
-    for (const v of blocking) {
-      // eslint-disable-next-line no-console
-      console.log(`[a11y] ${v.impact} ${v.id} — ${v.help}\n  ${v.nodes[0]?.html?.slice(0, 200)}`);
-    }
-  }
-  expect(blocking).toEqual([]);
-}
 
 test('거래 목록 fetch 실패 → role="alert" 영역에 에러 메시지 노출 + axe 위반 0건', async ({ page, context }) => {
   await mockBackend(context);
