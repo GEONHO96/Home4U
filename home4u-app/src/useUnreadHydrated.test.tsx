@@ -33,7 +33,7 @@ const { mockSetBadge, mockStorage } = vi.hoisted(() => {
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: mockStorage }));
 vi.mock('expo-notifications', () => ({ setBadgeCountAsync: mockSetBadge }));
 
-import { useUnread, useUnreadHydrated } from './unreadStore';
+import { useUnread, useUnreadHydrated, useUnreadTotal } from './unreadStore';
 
 beforeEach(() => {
   mockStorage.data.clear();
@@ -81,6 +81,21 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
       useUnread.persist.hasHydrated = originalHasHydrated;
       useUnread.persist.onFinishHydration = originalOnFinish;
     }
+  });
+
+  it('useUnreadTotal — byRoom 합계 selector, store 변경 시 re-render 트리거', async () => {
+    // 격리: 첫 mount 직전에 byRoom 만 초기화 (setState 의 partial merge — actions 보존)
+    useUnread.setState({ byRoom: {} });
+    const { result, rerender } = renderHook(() => useUnreadTotal());
+    rerender();
+    expect(result.current).toBe(0);
+
+    // setState 후 act + rerender — selector subscription 으로 re-render 트리거
+    await act(async () => { useUnread.setState({ byRoom: { 1: 3, 2: 5 } }); });
+    expect(result.current).toBe(8);
+
+    await act(async () => { useUnread.setState({ byRoom: { 1: 0, 2: 5 } }); });
+    expect(result.current).toBe(5);
   });
 
   it('unmount 후 콜백이 unsubscribe 되어 다시 호출되어도 setState 안 함', () => {

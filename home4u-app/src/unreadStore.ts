@@ -72,3 +72,15 @@ export function useUnreadHydrated(): boolean {
   }, []);
   return hydrated;
 }
+
+/**
+ * byRoom 합계를 컴포넌트가 구독 가능한 selector hook.
+ *
+ * total() 의 zustand getter 는 단순 함수 호출이라 byRoom 변경 시 자동 re-render 안 됨 — 컴포넌트가
+ * 합계를 보여주려면 이 hook 으로 구독해야 한다 (예: 헤더 배지, OS 뱃지 동기화 fallback).
+ *
+ * RN-thin selector hook 패턴 — 다른 store (chat, favorite 등) 도 동일 패턴으로 확장 가능.
+ */
+export function useUnreadTotal(): number {
+  return useUnread((state) => Object.values(state.byRoom).reduce((a, b) => a + b, 0));
+}
