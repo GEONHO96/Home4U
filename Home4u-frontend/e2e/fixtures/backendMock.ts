@@ -177,6 +177,23 @@ export interface MockTransactionOptions {
 }
 
 /**
+ * mockTransaction 이 반환하는 controller — 가상 시간을 즉시 advance 해 archive sweep 같은 시간 의존
+ * 시나리오를 실제 setTimeout 없이 검증하는 데 사용.
+ *
+ * 사용:
+ *   const tx = await mockTransaction(context, { archiveRejectedAfterMs: 1000 });
+ *   // ... reject 클릭 후
+ *   tx.advanceTimeBy(1500);  // 가상 시간 1.5초 진행 — 실 wall clock 은 변하지 않음
+ *   await page.reload();      // 다음 fetch 가 archive 된 결과 반환
+ */
+export interface MockTransactionController {
+  /** 가상 now() 를 ms 만큼 앞으로 진행. archive sweep 같은 시간 의존 흐름의 e2e 가속용. */
+  advanceTimeBy(ms: number): void;
+  /** 디버깅용 — 현재 가상 now (epoch ms). */
+  now(): number;
+}
+
+/**
  * /transactions/buyer · /transactions/seller · /properties/transactions/*\/approve · /reject ·
  * /payments · /payments/{id}/confirm 응답 mock.
  *
@@ -185,10 +202,16 @@ export interface MockTransactionOptions {
  *  - reject  호출 → 해당 거래 PENDING → REJECTED
  *  - confirm 호출 → APPROVED → COMPLETED (date 도 오늘로 세팅)
  * 후속 /transactions/{role}/{userId} 호출이 갱신된 state 를 반환해 UI 라벨이 자연스럽게 전이된다.
+ *
+ * 시간 추상화: 내부에서 Date.now() 대신 클로저 now() (real wall clock + advanceTimeBy 누적) 사용.
+ * advanceTimeBy 로 가상 시간을 점프하면 archive sweep 검증이 실시간 wait 없이 즉시 가능.
  */
-export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<void> {
+export async function mockTransaction(context: BrowserContext, options: MockTransactionOptions = {}): Promise<MockTransactionController> {
   const view = options.view ?? 'buyer';
   const archiveAfterMs = options.archiveRejectedAfterMs ?? 0;
+  // 가상 시간 — wall clock + advanceTimeBy 누적분. 테스트가 시간을 앞당길 때만 사용.
+  let virtualOffsetMs = 0;
+  const now = (): number => Date.now() + virtualOffsetMs;
   interface TxRow {
     id: number;
     status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
@@ -214,8 +237,8 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
   // 노드 프로세스에서 동기 실행되므로 간결).
   const visibleState = (): TxRow[] => {
     if (archiveAfterMs <= 0) return state;
-    const now = Date.now();
-    return state.filter((t) => !(t.status === 'REJECTED' && t.rejectedAt != null && now - t.rejectedAt >= archiveAfterMs));
+    const t = now();
+    return state.filter((row) => !(row.status === 'REJECTED' && row.rejectedAt != null && t - row.rejectedAt >= archiveAfterMs));
   };
 
   // role view — buyer / seller / both 에 따라 어느 엔드포인트가 state 를 반환할지 결정
@@ -247,7 +270,7 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
       const tx = state.find((t) => t.id === Number(m[1]));
       if (tx && tx.status === 'PENDING') {
         tx.status = 'REJECTED';
-        tx.rejectedAt = Date.now();
+        tx.rejectedAt = now();
       }
     }
     return r.fulfill({
@@ -279,4 +302,11 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
       body: JSON.stringify({ id: paymentId, status: 'SUCCEEDED', transaction: state.find((t) => t.id === confirmedTxId) }),
     });
   });
+
+  return {
+    advanceTimeBy(ms: number): void {
+      virtualOffsetMs += ms;
+    },
+    now,
+  };
 }
