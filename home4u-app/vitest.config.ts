@@ -29,9 +29,8 @@ export default defineConfig({
         lines: 80,
         functions: 80,
         statements: 80,
-        // useUnreadHydrated 같은 React hook 본체는 jsdom + @testing-library 없이 단위 검증 어려움 —
-        // line/func/stmt 의 강한 임계값으로 회귀 보호하고 branch 는 65% 로 약간 완화.
-        branches: 65,
+        // jsdom env + @testing-library/react 로 useUnreadHydrated hook 까지 cover 한 후 70% 로 복귀
+        branches: 70,
       },
     },
   },
