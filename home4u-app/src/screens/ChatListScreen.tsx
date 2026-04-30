@@ -12,7 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { getSessionUserId, getUnreadCount, listChatRooms, type ChatRoom } from '../api';
 import { getBackgroundUnreadState, type BgFetchState } from '../backgroundUnread';
-import { useUnread, useUnreadHydrated } from '../unreadStore';
+import { useUnread, useUnreadHydrated, useUnreadTotal } from '../unreadStore';
 import { useToast } from '../toastStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChatList'>;
@@ -34,6 +34,8 @@ export default function ChatListScreen({ navigation }: Props) {
   const [bgState, setBgState] = useState<BgFetchState | null>(null);
   const unread = useUnread((s) => s.byRoom);
   const setManyUnread = useUnread((s) => s.setMany);
+  // 헤더 합계 — selector hook 으로 구독해 markRead / setMany 직후 즉시 반영 (15s 폴링 의존 X)
+  const totalUnread = useUnreadTotal();
   const hydrated = useUnreadHydrated();
   const showToast = useToast((s) => s.show);
 
@@ -92,7 +94,20 @@ export default function ChatListScreen({ navigation }: Props) {
       contentContainerStyle={rooms.length === 0 ? styles.empty : { paddingVertical: 8 }}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
       ListHeaderComponent={
-        bgLabel ? <View style={styles.bgRow}><Text style={styles.bgText}>{bgLabel}</Text></View> : null
+        (bgLabel || totalUnread > 0) ? (
+          <View style={styles.bgRow}>
+            {bgLabel ? <Text style={styles.bgText}>{bgLabel}</Text> : null}
+            {totalUnread > 0 && (
+              <Text
+                style={styles.totalUnread}
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={`총 안 읽은 메시지 ${totalUnread}개`}
+              >
+                💬 안 읽음 {totalUnread > 99 ? '99+' : totalUnread}
+              </Text>
+            )}
+          </View>
+        ) : null
       }
       ListEmptyComponent={loading ? <ActivityIndicator /> : <Text style={styles.emptyText}>아직 채팅이 없습니다.</Text>}
       renderItem={({ item }) => {
@@ -135,6 +150,7 @@ const styles = StyleSheet.create({
   time: { color: '#8b95a1', fontSize: 11 },
   unreadBadge: { backgroundColor: '#0e5fe3', borderRadius: 10, minWidth: 20, paddingHorizontal: 6, paddingVertical: 2, alignItems: 'center' },
   unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  bgRow: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: '#f7f8fa' },
+  bgRow: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: '#f7f8fa', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bgText: { fontSize: 11, color: '#6b7585' },
+  totalUnread: { fontSize: 12, fontWeight: '700', color: '#0e5fe3' },
 });
