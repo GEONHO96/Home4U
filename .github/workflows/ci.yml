@@ -172,6 +172,19 @@ jobs:
       - name: Install web deps
         run: npm ci
 
+      # prepare 스크립트가 git config core.hooksPath = .husky 를 자동으로 wire-up 하는지 확인.
+      # 환경 차이 (Windows runner / fresh checkout 등) 로 prepare 가 실패해도 침묵하지 않도록.
+      - name: Verify prepare wired core.hooksPath → .husky
+        working-directory: ${{ github.workspace }}
+        run: |
+          actual=$(git config --local --get core.hooksPath || echo '(unset)')
+          if [ "$actual" != ".husky" ]; then
+            echo "FAIL: core.hooksPath = '$actual', expected '.husky'" >&2
+            exit 1
+          fi
+          echo "OK: core.hooksPath = .husky"
+        shell: bash
+
       - name: Restore axe scan cache
         # 같은 page key (path + DOM length + tags) 가 다른 빌드에서 재진입할 때 axe 호출(~1s) 절감.
         # cache miss 여도 e2e 는 정상 동작 — 그저 모든 시나리오가 fresh scan 일 뿐.
