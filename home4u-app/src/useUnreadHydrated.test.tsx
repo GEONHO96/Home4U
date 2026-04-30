@@ -100,6 +100,27 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
     expect(result.current).toBe(5);
   });
 
+  /**
+   * ChatListScreen 헤더 배지 wire-up 시뮬레이션 — markRead → 폴링 의존 없이 즉시 N→N-k 반영.
+   *
+   * 실 화면이 useUnreadTotal 만 hook 으로 구독한다는 점에 의존 — markRead 액션이 store 를 mutate 하면
+   * selector 가 즉시 re-render 트리거. 15s 폴링 (load() 재호출) 이전에도 합계가 갱신됨을 박제.
+   */
+  it('useUnreadTotal wire-up — markRead 직후 합계 즉시 반영 (폴링 무관)', async () => {
+    // 초기: 두 방 합계 8
+    useUnread.setState({ byRoom: { 1: 3, 2: 5 } });
+    const { result } = renderHook(() => useUnreadTotal());
+    expect(result.current).toBe(8);
+
+    // markRead(1) 액션 — 한 방을 0 으로. 폴링 없이 즉시 selector 가 알림
+    await act(async () => { useUnread.getState().markRead(1); });
+    expect(result.current).toBe(5);
+
+    // 다른 방도 markRead → 0
+    await act(async () => { useUnread.getState().markRead(2); });
+    expect(result.current).toBe(0);
+  });
+
   it('unmount 후 콜백이 unsubscribe 되어 다시 호출되어도 setState 안 함', () => {
     type FinishCb = Parameters<typeof useUnread.persist.onFinishHydration>[0];
     const finishHydrationCallbacks: FinishCb[] = [];
