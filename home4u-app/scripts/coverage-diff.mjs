@@ -74,7 +74,9 @@ if (base) {
     .slice(0, 3);
 
   if (hot.length > 0) {
-    lines.push('', '### 🔥 Hot files (lines % 변동 ≥ 1pp, top 3)', '');
+    // <details> 로 접어두기 — 기본은 totals 만 노출, reviewer 가 펼칠 때만 file-level 디테일 표시
+    // (코멘트 noise 절감 + 알림 본문 짧게 유지)
+    lines.push('', '<details>', '<summary>🔥 Hot files (lines % 변동 ≥ 1pp, top 3)</summary>', '');
     lines.push('| file | lines % | Δ vs base |');
     lines.push('|:-----|:--------|:----------|');
     for (const h of hot) {
@@ -87,6 +89,7 @@ if (base) {
         lines.push(`| ${filePath} | ${h.curLines.toFixed(2)}% | ${arrow}${Math.abs(h.delta).toFixed(2)} |`);
       }
     }
+    lines.push('', '</details>');
   }
 } else {
   lines.push('', '_base 아티팩트가 비어있어 추세 비교 없음 — 현재 값만 표시._');
