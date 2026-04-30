@@ -54,12 +54,14 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
 
   it('hasHydrated 가 처음에 false 였다면 onFinishHydration 콜백으로 true 전이', () => {
     // 직접 persist API 의 hasHydrated / onFinishHydration 을 spy 로 가로채서 시퀀스 강제
-    const finishHydrationCallbacks: Array<() => void> = [];
+    type FinishCb = Parameters<typeof useUnread.persist.onFinishHydration>[0];
+    const finishHydrationCallbacks: FinishCb[] = [];
     const originalHasHydrated = useUnread.persist.hasHydrated;
     const originalOnFinish = useUnread.persist.onFinishHydration;
     let isHydrated = false;
     useUnread.persist.hasHydrated = () => isHydrated;
-    useUnread.persist.onFinishHydration = (cb: () => void) => {
+    // PersistListener<UnreadState> 시그니처 — (state: UnreadState) => void. 본 테스트는 state 인자를 사용하지 않으므로 unknown 으로 narrow.
+    useUnread.persist.onFinishHydration = (cb: FinishCb) => {
       finishHydrationCallbacks.push(cb);
       return () => {
         const i = finishHydrationCallbacks.indexOf(cb);
@@ -74,7 +76,7 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
       // hydration 완료 알림
       act(() => {
         isHydrated = true;
-        finishHydrationCallbacks.forEach((cb) => cb());
+        finishHydrationCallbacks.forEach((cb) => cb(useUnread.getState()));
       });
       expect(result.current).toBe(true);
     } finally {
@@ -99,13 +101,14 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
   });
 
   it('unmount 후 콜백이 unsubscribe 되어 다시 호출되어도 setState 안 함', () => {
-    const finishHydrationCallbacks: Array<() => void> = [];
+    type FinishCb = Parameters<typeof useUnread.persist.onFinishHydration>[0];
+    const finishHydrationCallbacks: FinishCb[] = [];
     const originalHasHydrated = useUnread.persist.hasHydrated;
     const originalOnFinish = useUnread.persist.onFinishHydration;
     let isHydrated = false;
     let unsubCount = 0;
     useUnread.persist.hasHydrated = () => isHydrated;
-    useUnread.persist.onFinishHydration = (cb: () => void) => {
+    useUnread.persist.onFinishHydration = (cb: FinishCb) => {
       finishHydrationCallbacks.push(cb);
       return () => {
         unsubCount += 1;
@@ -122,7 +125,7 @@ describe('useUnreadHydrated · React hook 본체 (jsdom)', () => {
       expect(() => {
         act(() => {
           isHydrated = true;
-          finishHydrationCallbacks.forEach((cb) => cb());
+          finishHydrationCallbacks.forEach((cb) => cb(useUnread.getState()));
         });
       }).not.toThrow();
     } finally {
