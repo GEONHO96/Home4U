@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps",
-    "lhci": "lhci autorun --config=./lighthouserc.json"
+    "lhci": "lhci autorun --config=./lighthouserc.json",
+    "clean:axe-cache": "node scripts/clean-axe-cache.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.50.0",
