@@ -168,6 +168,8 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
   let baseUnread = options.unread ?? 0;
   // 마지막 read 시점 (baseStartMs 기준 ms). markRead 호출 시 갱신 — 이 시점 이후의 delayedMessages 만 unread 로 카운트.
   let lastReadElapsedMs = -1;
+  // markRead 의 per-message 모드: 이 id 까지의 delayed 메시지를 read 로 마킹 (시간 기준과 합쳐 더 보수적인 쪽으로 판정).
+  let readUpToMessageId: number | null = null;
 
   // 가상 시간 기준으로 baseStartMs + afterMs 이 통과한 delayedMessages 만 visible
   const elapsedNow = () => now() - baseStartMs;
@@ -185,9 +187,17 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
     return [...messages, ...extras];
   };
   // 도착했지만 아직 read 되지 않은 (상대방 발신) delayedMessages 카운트 — base unread 와 합산해 응답.
+  // read 판정: time-based (afterMs > lastReadElapsedMs) AND/OR per-message (id > readUpToMessageId).
+  // 둘 다 만족해야 unread 로 카운트됨 — 더 보수적인 (덜 read 된) 쪽 우선.
   const computeUnread = () => {
     const elapsed = elapsedNow();
-    const arrivedFromOther = delayed.filter((d) => elapsed >= d.afterMs && d.senderId !== buyer.id && d.afterMs > lastReadElapsedMs).length;
+    const arrivedFromOther = delayed.filter((d) => {
+      if (elapsed < d.afterMs) return false; // 아직 도착 안 함
+      if (d.senderId === buyer.id) return false; // 자기 발신
+      if (d.afterMs <= lastReadElapsedMs) return false; // 시간 기준 read
+      if (readUpToMessageId != null && d.id <= readUpToMessageId) return false; // per-message read
+      return true;
+    }).length;
     return baseUnread + arrivedFromOther;
   };
 
@@ -207,9 +217,22 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
   await context.route(`**/chats/${roomId}/unread-count**`, (r) => r.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify({ count: computeUnread() }),
   }));
+  // markRead 의 per-message 모드: body 에 { upToMessageId: N } 가 있으면 그 id 까지만 read 로 처리
+  // (delayed 메시지 중 id <= upToMessageId 인 것만 unread 카운트에서 제외).
+  // body 가 없거나 파싱 실패하면 기존 동작 (시간 기준 — 이 시점까지 도착한 모든 delayed 를 read 처리).
   await context.route(`**/chats/${roomId}/read**`, (r) => {
-    // markRead 시점에 elapsed 시간을 기록 — 이전 delayedMessages 는 모두 read 처리됨
-    lastReadElapsedMs = elapsedNow();
+    let upTo: number | null = null;
+    try {
+      const body = r.request().postDataJSON?.() as { upToMessageId?: number } | null;
+      if (body && typeof body.upToMessageId === 'number') upTo = body.upToMessageId;
+    } catch { /* body 없음 / 파싱 실패 — silent */ }
+
+    if (upTo != null) {
+      readUpToMessageId = readUpToMessageId == null ? upTo : Math.max(readUpToMessageId, upTo);
+    } else {
+      // 시간 기준 — 호출 시점까지 도착한 모든 delayed 를 read 처리
+      lastReadElapsedMs = elapsedNow();
+    }
     baseUnread = 0;
     return r.fulfill({
       status: 200, contentType: 'application/json', body: '{"updated":1}',
@@ -218,6 +241,9 @@ export async function mockChatRoom(context: BrowserContext, options: MockChatRoo
 
   return {
     advanceTimeBy(ms: number): void {
+      // 단방향 계약 — 음수 ms (시간 되감기) 는 controllers state machine 의 무결성을 깨므로 거부.
+      // 예: rejectedAt 이미 기록된 거래를 시간 되감으면 archive 판정이 뒤집어진다.
+      if (ms < 0) throw new Error(`mockChatRoom.advanceTimeBy: negative ms (${ms}) — controllers 는 단방향 advance 만 지원`);
       virtualOffsetMs += ms;
     },
     now,
@@ -377,6 +403,7 @@ export async function mockTransaction(context: BrowserContext, options: MockTran
 
   return {
     advanceTimeBy(ms: number): void {
+      if (ms < 0) throw new Error(`mockTransaction.advanceTimeBy: negative ms (${ms}) — controllers 는 단방향 advance 만 지원`);
       virtualOffsetMs += ms;
     },
     now,
