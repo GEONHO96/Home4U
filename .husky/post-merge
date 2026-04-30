@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# post-merge: PR/branch 머지 후 자동 실행되는 정리 작업.
+# - axe scan 디스크 캐시의 14일 이상 항목 제거 (mtime 기반) → 로컬 dev 디스크 누수 방지
+# - 다른 정리 작업이 추가되면 여기에 라인 추가
+#
+# HUSKY=0 환경변수로 스킵 가능. 실패는 silent (|| true) — git merge 흐름을 깨지 않음.
+
+if [ "$HUSKY" = "0" ]; then
+  exit 0
+fi
+
+# Home4u-frontend 디렉토리에서 npm script 호출 (repo root 에서 git merge 가 일어남)
+if [ -f "Home4u-frontend/package.json" ]; then
+  (cd Home4u-frontend && npm run --silent clean:axe-cache -- --days=14) || true
+fi
