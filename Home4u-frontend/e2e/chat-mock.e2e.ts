@@ -110,6 +110,39 @@ test('mockChatRoom — delayed 메시지 도착 시 unread-count 증가, markRea
 });
 
 /**
+ * 자기 발신 메시지는 unread 카운트를 올리지 않아야 한다.
+ *
+ * computeUnread 는 senderId !== buyer.id 인 delayed 만 카운트 — 자기 보낸 메시지는 즉시 read 로 간주.
+ * 실 백엔드에서도 발신자는 자기 메시지를 unread 로 표시하지 않으므로 동일한 시맨틱.
+ */
+test('mockChatRoom — 자기 발신 (senderId === buyer.id) delayed 메시지는 unread 증가 X', async ({ page, context }) => {
+  await mockBackend(context);
+  const chat = await mockChatRoom(context, {
+    roomId: 1,
+    buyerId: 2,
+    sellerId: 3,
+    delayedMessages: [
+      // 동일 시점에 자기 발신 1 + 상대방 발신 1 → 총 unread 는 1 (상대방 것만)
+      { id: 31, senderId: 2, content: '내가 보낸 메시지', afterMs: 30_000 },
+      { id: 32, senderId: 3, content: '상대방 메시지', afterMs: 30_000 },
+    ],
+  });
+  await injectFakeSession(context, { userId: 2 });
+
+  await page.goto('/');
+  const fetchUnread = () => page.evaluate(async () => {
+    const r = await fetch('http://localhost:8080/chats/1/unread-count?userId=2');
+    return (await r.json()).count;
+  });
+
+  expect(await fetchUnread()).toBe(0);
+
+  // 가상 시간 점프 — 두 메시지 모두 도착, 자기 발신은 카운트 X
+  chat.advanceTimeBy(31_000);
+  expect(await fetchUnread()).toBe(1);
+});
+
+/**
  * advanceTime 헬퍼 — Node 측 controller + 브라우저 측 Playwright clock 동시 진행 검증.
  *
  * 의도: ChatRoom 의 5초 setInterval 폴링 / 30초 reconnect 같은 wall-clock 의존 흐름을 가속하려면
